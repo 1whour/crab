@@ -15,7 +15,7 @@ import (
 const (
 	ecodeRun      = 1 //任务运行出错
 	ecodeCancel   = 2 //任务取消出错
-	ecodeNotFound = 3
+	ecodeNotFound = 3 //本执行器里面没有这个taskName
 )
 
 // 客户端
@@ -34,7 +34,7 @@ type callInfo struct {
 }
 
 // 新建基于gin的执行器
-func NewGinExecutor(opts ...Option) Executor {
+func NewGinExecutor(opts ...Option) (Executor, error) {
 	c := &Client{}
 	for _, o := range opts {
 		o(&c.options)
@@ -44,7 +44,16 @@ func NewGinExecutor(opts ...Option) Executor {
 	if c.Slog == nil {
 		c.Slog = slog.New(os.Stdout).SetLevel("debug")
 	}
-	return c
+
+	if c.IP == "" {
+		ips, err := getIpList()
+		if err != nil {
+			return nil, err
+		}
+		c.IP = ips[0]
+	}
+
+	return c, nil
 }
 
 // 把taskName 注册到map里面
@@ -61,6 +70,7 @@ func (c *Client) Register(taskName string, handler Handler) {
 	c.call[taskName] = callInfo{handler: handler, ctx: ctx, cancel: cancel}
 }
 
+// 写错误
 func (c *Client) httpWriteErr(hcode int, ctx *gin.Context, code int, msg string) {
 	ctx.JSON(hcode, gin.H{"code": code, "message": msg})
 	c.Error().Msgf("code:%d, msg:%s\n", code, msg)

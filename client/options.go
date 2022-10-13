@@ -10,6 +10,7 @@ type options struct {
 	Endpoint  string `json:"endpoint"`
 	Namespace string `json:"namespace"`
 	GroupId   string `json:"group_id"`
+	IP        string `json:"ip"`
 	*slog.Slog
 }
 
@@ -17,6 +18,13 @@ type options struct {
 func WithEndpoint(endpoint string) Option {
 	return func(o *options) {
 		o.Endpoint = endpoint
+	}
+}
+
+// 设置ip
+func WithClientIP(ip string) Option {
+	return func(o *options) {
+		o.IP = ip
 	}
 }
 
