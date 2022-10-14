@@ -2,6 +2,7 @@ package executer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -57,7 +58,16 @@ func (h *httpExecuter) Run() error {
 	h.req.SetURL(u.String())     //设置url
 	h.req.SetBody(httpData.Body) //设置body
 	h.req.WithContext(h.ctx)     //设置context
-	return nil
+	code := 0
+	err := h.req.Code(&code).Do()
+
+	return ifop.IfElse(err != nil,
+		err,
+		ifop.IfElse(code != 200,
+			errors.New("httpExecuter, http code != 200"),
+			nil,
+		))
+
 }
 
 // cancel
