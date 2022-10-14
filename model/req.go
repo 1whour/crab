@@ -2,21 +2,32 @@ package model
 
 import "time"
 
-type Param struct {
-	Executor string //通用执行器，shell, http, grpc
-	TaskName string //自定义执行器，需要给到TaskName
-	HTTP     HTTP   //http包
-	Shell    Shell  //shell包
+type ExecutorParam struct {
+	TaskName string `yaml:"task_name"` //自定义执行器，需要给到TaskName
+	HTTP     *HTTP  `yaml:"http"`      //http包
+	Shell    *Shell `yaml:"shell"`     //shell包
+	Grpc     *Grpc  `yaml:"grpc"`      //grpc
 }
 
 // 判断是通用执行器
-func (p Param) IsGeneral() bool {
-	switch p.Executor {
-	case "http", "grpc", "shell":
-		return true
+func (p ExecutorParam) IsGeneral() bool {
+	return p.HTTP != nil || p.Shell != nil || p.Grpc != nil
+}
+
+func (p ExecutorParam) Name() string {
+	if p.HTTP != nil {
+		return "http"
 	}
 
-	return false
+	if p.Shell != nil {
+		return "shell"
+	}
+
+	if p.Grpc != nil {
+		return "grpc"
+	}
+
+	return ""
 }
 
 // grpc 数据包
@@ -31,14 +42,14 @@ type Shell struct {
 
 // 调度器发给执行器的包
 type HTTP struct {
-	Scheme  string //https还是http，默认是http
-	Host    string //是连接的主机名，默认是调度器的ip
-	Port    int    //端口
-	Path    string
-	Method  string      //get post delete
-	Querys  []NameValue //存放查询字符串
-	Headers []NameValue //存放http header
-	Body    string      //存放body
+	Scheme  string      `yaml:"scheme"` //https还是http，默认是http
+	Host    string      `yaml:"host"`   //是连接的主机名，默认是调度器的ip
+	Port    int         `yaml:"port"`   //端口
+	Path    string      `yaml:"path"`
+	Method  string      `yaml:"method"`  //get post delete
+	Querys  []NameValue `yaml:"querys"`  //存放查询字符串
+	Headers []NameValue `yaml:"headers"` //存放http header
+	Body    string      `yaml:"body"`    //存放body
 }
 
 type NameValue struct {

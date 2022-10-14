@@ -78,7 +78,7 @@ func (c *Client) httpWriteErr(hcode int, ctx *gin.Context, code int, msg string)
 
 // 运行handler的函数
 func (c *Client) run(ctx *gin.Context) {
-	var req model.Param
+	var req model.ExecutorParam
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		c.httpWriteErr(http.StatusInternalServerError, ctx, ecodeRun, err.Error())
@@ -118,7 +118,7 @@ func (c *Client) run(ctx *gin.Context) {
 
 // 取消现在运行中的函数
 func (c *Client) cancel(ctx *gin.Context) {
-	var req model.Param
+	var req model.ExecutorParam
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		c.httpWriteErr(http.StatusInternalServerError, ctx, ecodeCancel, err.Error())

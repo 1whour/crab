@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/gnh123/scheduler/model"
+	"github.com/guonaihong/gout"
 	"github.com/guonaihong/gout/dataflow"
 	"github.com/guonaihong/gstl/ifop"
 )
@@ -21,7 +22,7 @@ type httpExecuter struct {
 	req    *dataflow.Gout     //http client
 	ctx    context.Context    //新生成的ctx
 	cancel context.CancelFunc //取消用的cancel
-	param  *model.Param
+	param  *model.ExecutorParam
 }
 
 // 运行
@@ -52,7 +53,7 @@ func (h *httpExecuter) Run() error {
 
 	var u url.URL
 	u.Scheme = httpData.Scheme
-	u.Host = ifop.IfElse(httpData.Port == 0, fmt.Sprintf("%s:%d", u.Host, httpData.Port), httpData.Host)
+	u.Host = ifop.IfElse(httpData.Port != 0, fmt.Sprintf("%s:%d", u.Host, httpData.Port), httpData.Host)
 	u.Path = httpData.Path
 
 	h.req.SetURL(u.String())     //设置url
@@ -76,9 +77,11 @@ func (h *httpExecuter) Cancel() error {
 	return nil
 }
 
-func createHTTPExecuter(ctx context.Context, param *model.Param) Executer {
+func createHTTPExecuter(ctx context.Context, param *model.ExecutorParam) Executer {
 	h := &httpExecuter{}
 	h.ctx, h.cancel = context.WithCancel(ctx)
 
+	h.param = param
+	h.req = gout.New()
 	return h
 }

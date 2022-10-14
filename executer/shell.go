@@ -23,7 +23,7 @@ func (s *shellExecuter) Run() error {
 	return s.cmd.Run()
 }
 
-func createShellExecuter(ctx context.Context, param *model.Param) Executer {
+func createShellExecuter(ctx context.Context, param *model.ExecutorParam) Executer {
 	s := &shellExecuter{}
 
 	shellParam := param.Shell

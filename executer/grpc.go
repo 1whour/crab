@@ -21,6 +21,6 @@ func (s *grpcExecuter) Run() error {
 	return nil
 }
 
-func createGRPCExecuter(ctx context.Context, param *model.Param) Executer {
+func createGRPCExecuter(ctx context.Context, param *model.ExecutorParam) Executer {
 	return nil
 }
