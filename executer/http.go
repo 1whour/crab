@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/gnh123/scheduler/model"
 	"github.com/guonaihong/gout"
@@ -29,7 +30,7 @@ type httpExecuter struct {
 func (h *httpExecuter) Run() error {
 	httpData := h.param.HTTP
 
-	h.req.SetMethod(httpData.Method)
+	h.req.SetMethod(strings.ToUpper(httpData.Method))
 
 	// 查询字符串
 	if len(httpData.Querys) > 0 {
@@ -60,7 +61,7 @@ func (h *httpExecuter) Run() error {
 	h.req.SetBody(httpData.Body) //设置body
 	h.req.WithContext(h.ctx)     //设置context
 	code := 0
-	err := h.req.Code(&code).Do()
+	err := h.req.Code(&code).Debug(true).Do()
 
 	return ifop.IfElse(err != nil,
 		err,
