@@ -26,7 +26,7 @@ type httpExecuter struct {
 
 // 运行
 func (h *httpExecuter) Run() error {
-	httpData := h.param.HTTPMessage
+	httpData := h.param.HTTP
 
 	h.req.SetMethod(httpData.Method)
 

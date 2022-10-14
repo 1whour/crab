@@ -1,5 +1,26 @@
 package executer
 
-func init() {
+import (
+	"context"
 
+	"github.com/gnh123/scheduler/model"
+)
+
+func init() {
+	Register("grpc", createGRPCExecuter)
+}
+
+type grpcExecuter struct {
+}
+
+func (s *grpcExecuter) Cancel() error {
+	return nil
+}
+
+func (s *grpcExecuter) Run() error {
+	return nil
+}
+
+func createGRPCExecuter(ctx context.Context, param *model.Param) Executer {
+	return nil
 }

@@ -3,10 +3,10 @@ package model
 import "time"
 
 type Param struct {
-	Executor    string //通用执行器，shell, http, grpc
-	TaskName    string //自定义执行器，需要给到TaskName
-	HTTPMessage HTTP   //http包
-	Shell       Shell  //shell包
+	Executor string //通用执行器，shell, http, grpc
+	TaskName string //自定义执行器，需要给到TaskName
+	HTTP     HTTP   //http包
+	Shell    Shell  //shell包
 }
 
 // 判断是通用执行器
@@ -17,6 +17,10 @@ func (p Param) IsGeneral() bool {
 	}
 
 	return false
+}
+
+// grpc 数据包
+type Grpc struct {
 }
 
 // shell数据包
