@@ -14,7 +14,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestRun(t *testing.T) {
+// 使用如下结构体触发http请求
+func TestHTTPExecuterRun(t *testing.T) {
 
 	router := gin.New()
 	router.POST("/", func(c *gin.Context) {

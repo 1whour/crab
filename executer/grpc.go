@@ -6,6 +6,7 @@ import (
 	"github.com/gnh123/scheduler/model"
 )
 
+// 留空，下个版本实现
 func init() {
 	Register("grpc", createGRPCExecuter)
 }
