@@ -36,7 +36,7 @@ var (
 	defautlClient *clientv3.Client
 )
 
-func (r *Gate) init() error {
+func (r *Gate) init() (err error) {
 
 	r.ctx = context.TODO()
 	r.log = slog.New(os.Stdout).SetLevel(r.Level)
@@ -44,7 +44,10 @@ func (r *Gate) init() error {
 		r.Name = uuid.New().String()
 	}
 
-	r.newEtcdClient() //初始etcd客户端
+	if defautlClient, err = utils.NewEtcdClient(r.EtcdAddr); err != nil { //初始etcd客户端
+		return err
+	}
+
 	return nil
 }
 
@@ -76,20 +79,7 @@ func (r *Gate) register() error {
 		return err
 	}
 
-	_, err = defautlClient.Put(r.ctx, r.genEtcdPath(), clientv3.WithLease(leaseID))
-	return err
-}
-
-// 创建etcd的连接池
-func (r *Gate) newEtcdClient() error {
-
-	var err error
-	defautlClient, err = clientv3.New(clientv3.Config{
-		//Endpoints:   []string{"localhost:2379", "localhost:22379", "localhost:32379"},
-		Endpoints:   r.EtcdAddr,
-		DialTimeout: 5 * time.Second,
-	})
-
+	_, err = defautlClient.Put(r.ctx, r.genEtcdPath(), r.ServerAddr, clientv3.WithLease(leaseID))
 	return err
 }
 
