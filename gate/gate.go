@@ -3,16 +3,21 @@ package gate
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/slog"
 	"github.com/gnh123/scheduler/utils"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
+
+var upgrader = websocket.Upgrader{}
 
 // Gate模块定位是网关
 // 1.注册自己的信息至etcd中
@@ -26,7 +31,7 @@ type Gate struct {
 	Level        string        `clop:"short;long" usage:"log level"`
 	LeaseTime    time.Duration `clop:"long" usage:"lease time" default:"10s"`
 
-	log *slog.Slog
+	*slog.Slog
 	ctx context.Context
 }
 
@@ -39,7 +44,7 @@ var (
 func (r *Gate) init() (err error) {
 
 	r.ctx = context.TODO()
-	r.log = slog.New(os.Stdout).SetLevel(r.Level)
+	r.Slog = slog.New(os.Stdout).SetLevel(r.Level)
 	if r.Name == "" {
 		r.Name = uuid.New().String()
 	}
@@ -74,13 +79,43 @@ func (r *Gate) register() error {
 		panic("The service startup address is empty, please set -s ip:port")
 	}
 
-	leaseID, err := utils.NewLeaseWithKeepalive(r.ctx, r.log, defautlClient, r.LeaseTime)
+	leaseID, err := utils.NewLeaseWithKeepalive(r.ctx, r.Slog, defautlClient, r.LeaseTime)
 	if err != nil {
 		return err
 	}
 
+	// 注册自己的节点信息
 	_, err = defautlClient.Put(r.ctx, r.genEtcdPath(), r.ServerAddr, clientv3.WithLease(leaseID))
 	return err
+}
+
+func (r *Gate) stream(c *gin.Context) {
+
+	w := c.Writer
+	req := c.Request
+
+	con, err := upgrader.Upgrade(w, req, nil)
+	if err != nil {
+		r.Error().Msgf("upgrade:", err)
+		return
+	}
+	defer con.Close()
+
+	for {
+		// 读取执行结果，或者心跳
+		mt, message, err := con.ReadMessage()
+		if err != nil {
+			log.Println("read:", err)
+			break
+		}
+
+		//log.Printf("recv: %s", message)
+		err = con.WriteMessage(mt, message)
+		if err != nil {
+			log.Println("write:", err)
+			break
+		}
+	}
 }
 
 // 该模块入口函数
@@ -88,4 +123,8 @@ func (r *Gate) SubMain() {
 	if err := r.init(); err != nil {
 		panic(err.Error())
 	}
+
+	g := gin.New()
+	g.GET("/stream")
+	g.Run()
 }
