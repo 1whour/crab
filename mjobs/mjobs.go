@@ -11,6 +11,8 @@ import (
 	"github.com/gnh123/scheduler/utils"
 	"github.com/google/uuid"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/concurrency"
+	"go.etcd.io/etcd/clientv3/concurrency"
 )
 
 // mjobs管理task
@@ -23,7 +25,8 @@ type Mjobs struct {
 	LeaseTime    time.Duration `clop:"long" usage:"lease time" default:"10s"`
 
 	*slog.Slog
-	ctx context.Context
+	ctx      context.Context
+	taskChan chan string
 }
 
 var (
@@ -39,6 +42,7 @@ func (m *Mjobs) init() (err error) {
 	if m.Name == "" {
 		m.Name = uuid.New().String()
 	}
+	m.taskChan = make(chan string, 100)
 
 	if defautlClient, err = utils.NewEtcdClient(m.EtcdAddr); err != nil { //初始etcd客户端
 		return err
@@ -61,6 +65,30 @@ func (m *Mjobs) watchTask() {
 			}
 		}
 	}
+}
+
+func (m *Mjobs) readLoop() {
+
+	tk := time.NewTicker(time.Second)
+	for {
+
+		select {
+		case <-m.taskChan:
+		case <-tk.C:
+		}
+	}
+}
+
+// 分配任务的逻辑，使用分布式锁
+func (m *Mjobs) assign() {
+	s, _ := concurrency.NewSession(defautlClient)
+	defer s.Close()
+
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*5)
+	defer cancel()
+	l := concurrency.NewMutex(s, model.AssignTaskMutex)
+	l.Lock(ctx)
+	l.Unlock(ctx)
 }
 
 // mjobs子命令的的入口函数

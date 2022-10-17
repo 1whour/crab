@@ -17,4 +17,7 @@ var (
 	//value值就是task id, 通过心跳检查runtime是否活跃，如果runtime挂掉，mjobs分启动重新分配
 	//为了防止雪崩，mjobs在分配失败会标记任务状态为待分配
 	RuntimeActivity = "/scheduler/runtime/activity" //value是runtime的uuid
+
+	//分配task
+	AssignTaskMutex = "/scheduler/task/assign/mutex"
 )
