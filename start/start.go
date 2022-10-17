@@ -1,7 +1,7 @@
 package start
 
 type Start struct {
-	FileName string   `clop:"short;long" usage:""`
+	FileName string   `clop:"short;long" usage:"config filename" valid:"required"`
 	GateAddr []string `clop:"short;long" usage:""`
 }
 

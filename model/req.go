@@ -2,6 +2,10 @@ package model
 
 import "time"
 
+type Param struct {
+	APIVersion string `yaml:"apiVersion"`
+}
+
 type ExecutorParam struct {
 	TaskName string `yaml:"task_name"` //自定义执行器，需要给到TaskName
 	HTTP     *HTTP  `yaml:"http"`      //http包
