@@ -2,6 +2,13 @@ package model
 
 const (
 	// 运行的地址
-	RUN_URL    = "/_github.com/gnh123/scheduler/run"
-	RUN_CANCEL = "/_github.com/gnh123/scheduler/cancel"
+	LAMBDA_RUN_URL    = "/_github.com/gnh123/scheduler/run"
+	LAMBDA_RUN_CANCEL = "/_github.com/gnh123/scheduler/cancel"
+
+	// 管理task相关接口
+	TASK_STREAM_URL = "/scheduler/task/stream"
+	TASK_CREATE_URL = "/scheduler/task/"
+	TASK_DELETE_URL = "/scheduler/task/"
+	TASK_UPDATE_URL = "/scheduler/task/"
+	TASK_CANCEL_URL = "/scheduler/task/cancel"
 )

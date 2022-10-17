@@ -19,10 +19,10 @@ var (
 
 // 负责连接到gate服务
 // 1. 如果是内网模式，runtime和gate在互相可访达的网络, 直接从etcd watch gate节点信息
-// 2. 如果是外网模式，runtime只要写一个或者多个Endpoint, 做客户的负载均衡
+// 2. 如果是外网模式，runtime只要写一个或者多个GateAddr, 做客户的负载均衡
 type Runtime struct {
 	EtcdAddr []string `clop:"short;long" usage:"etcd address"`
-	Endpoint []string `clop:"long" usage:"endpoint address"`
+	GateAddr []string `clop:"long" usage:"endpoint address"`
 	Level    string   `clop:"long" usage:"log level" default:"error"`
 
 	ctx context.Context
@@ -33,7 +33,7 @@ type Runtime struct {
 func (r *Runtime) init() (err error) {
 	r.Slog = slog.New(os.Stdout).SetLevel(r.Level)
 
-	if len(r.EtcdAddr) == 0 && len(r.Endpoint) == 0 {
+	if len(r.EtcdAddr) == 0 && len(r.GateAddr) == 0 {
 		panic("etcd address is nil or endpoint is nil")
 	}
 	// 设置日志
@@ -52,7 +52,7 @@ func (r *Runtime) init() (err error) {
 		}
 	}
 
-	for i, a := range r.Endpoint {
+	for i, a := range r.GateAddr {
 		r.addr.Store(a, fmt.Sprintf("endpoint index:%d", i))
 	}
 
@@ -78,10 +78,12 @@ func (r *Runtime) watchGateNode() {
 // 接受来自gate服务的命令, 执行并返回结果
 func (r *Runtime) readLoop(conn *websocket.Conn) error {
 	for {
-		err := conn.ReadJSON()
-		if err != nil {
-			return err
-		}
+		/*
+			err := conn.ReadJSON()
+			if err != nil {
+				return err
+			}
+		*/
 		// TODO 运行执行器
 	}
 
@@ -89,7 +91,7 @@ func (r *Runtime) readLoop(conn *websocket.Conn) error {
 
 func (r *Runtime) createConntion(gateAddr string, val string) {
 
-	c, _, err := websocket.DefaultDialer.Dial(gateAddr, nil)
+	c, _, err := websocket.DefaultDialer.Dial(gateAddr+"/"+model.TASK_STREAM_URL, nil)
 	if err != nil {
 		r.Error().Msgf("runtime:dial:%s\n", err)
 		return

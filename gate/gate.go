@@ -118,6 +118,26 @@ func (r *Gate) stream(c *gin.Context) {
 	}
 }
 
+// 把task信息保存至etcd
+func (r *Gate) createTask(c *gin.Context) {
+
+}
+
+// 删除etcd里面task信息，也直接下发命令更新runtime里面信息
+func (r *Gate) deleteTask(c *gin.Context) {
+
+}
+
+// 更新etcd里面的task信息，也下发命令更新runtime里面信息
+func (r *Gate) updateTask(c *gin.Context) {
+
+}
+
+// 更新etcd里面的task信息，置为静止，下发命令取消正在执行中的task
+func (r *Gate) cancelTask(c *gin.Context) {
+
+}
+
 // 该模块入口函数
 func (r *Gate) SubMain() {
 	if err := r.init(); err != nil {
@@ -125,6 +145,11 @@ func (r *Gate) SubMain() {
 	}
 
 	g := gin.New()
-	g.GET("/stream")
+	g.GET(model.TASK_STREAM_URL, r.stream) //流式接口，主动推送任务至runtime
+	g.POST(model.TASK_CREATE_URL, r.createTask)
+	g.DELETE(model.TASK_DELETE_URL, r.deleteTask)
+	g.PUT(model.TASK_UPDATE_URL, r.updateTask)
+	g.POST(model.TASK_CANCEL_URL, r.cancelTask)
+
 	g.Run()
 }

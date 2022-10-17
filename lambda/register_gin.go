@@ -137,8 +137,8 @@ func (c *Client) cancel(ctx *gin.Context) {
 
 // 如果是改造现有的gin http回调函数让其支持scheduler调度，在r.Run()接口之前调用
 func (c *Client) OnlyRegisterURL(g *gin.Engine) {
-	g.POST(model.RUN_CANCEL, c.cancel)
-	g.POST(model.RUN_URL, c.run)
+	g.POST(model.LAMBDA_RUN_CANCEL, c.cancel)
+	g.POST(model.LAMBDA_RUN_URL, c.run)
 }
 
 // 第一个参数是gin引擎，第二个可选参数是地址
