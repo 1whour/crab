@@ -3,14 +3,15 @@ package model
 import "time"
 
 type Param struct {
-	APIVersion string `yaml:"apiVersion"`
+	APIVersion string        `yaml:"apiVersion" binding:"required" json:"api_version"`
+	Executor   ExecutorParam `json:"executor" yaml:"executor"`
 }
 
 type ExecutorParam struct {
-	TaskName string `yaml:"task_name"` //自定义执行器，需要给到TaskName
-	HTTP     *HTTP  `yaml:"http"`      //http包
-	Shell    *Shell `yaml:"shell"`     //shell包
-	Grpc     *Grpc  `yaml:"grpc"`      //grpc
+	TaskName string `yaml:"task_name" json:"task_name" binding:"required"` //自定义执行器，需要给到TaskName
+	HTTP     *HTTP  `yaml:"http" json:"http"`                              //http包
+	Shell    *Shell `yaml:"shell" json:"shell"`                            //shell包
+	Grpc     *Grpc  `yaml:"grpc" json:"grpc"`                              //grpc
 }
 
 // 判断是通用执行器

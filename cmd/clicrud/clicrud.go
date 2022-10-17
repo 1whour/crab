@@ -16,14 +16,22 @@ type CrudOpt struct {
 // fileName是需要打开的文件名
 // url是gate服务的地址
 func Crud(fileName string, url string, method string) error {
-	fd, err := os.OpenFile(fileName, os.O_RDONLY, 0644)
+	all, err := os.ReadFile(fileName)
 	if err != nil {
 		return err
 	}
 
 	code := 0
 	s := ""
-	err = gout.New().SetMethod(strings.ToUpper(method)).SetBody(fd).Code(&code).BindBody(&s).Do()
+	req := gout.New().SetMethod(strings.ToUpper(method))
+	if strings.HasSuffix(fileName, ".yaml") || strings.HasSuffix(fileName, ".yml") {
+		req.SetYAML(all)
+	} else if strings.HasSuffix(fileName, ".json") {
+		req.SetJSON(all)
+	} else {
+		req.SetBody(all)
+	}
+	err = req.Code(&code).BindBody(&s).Do()
 	if err != nil {
 		return err
 	}

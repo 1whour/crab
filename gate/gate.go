@@ -2,6 +2,7 @@ package gate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -18,6 +19,8 @@ import (
 )
 
 var upgrader = websocket.Upgrader{}
+
+// TODO, 规范下错误码
 
 // Gate模块定位是网关
 // 1.注册自己的信息至etcd中
@@ -39,6 +42,7 @@ type Gate struct {
 var (
 	conns         sync.Map
 	defautlClient *clientv3.Client
+	defaultKVC    clientv3.KV
 )
 
 func (r *Gate) init() (err error) {
@@ -53,6 +57,7 @@ func (r *Gate) init() (err error) {
 		return err
 	}
 
+	defaultKVC = clientv3.NewKV(defautlClient) // 内置自动重试的逻辑
 	return nil
 }
 
@@ -118,9 +123,62 @@ func (r *Gate) stream(c *gin.Context) {
 	}
 }
 
+func (r *Gate) ok(c *gin.Context) {
+	r.Debug().Caller(1).Msg(msg)
+	c.JSON(200, gin.H{"code": 0, "message": ""})
+}
+
+// 简单的包装函数
+func (r *Gate) error(c *gin.Context, code int, format string, a ...any) {
+
+	msg := fmt.Sprintf(format, a...)
+	r.Error().Caller(1).Msg(msg)
+	c.JSON(500, gin.H{"code": code, "message": msg})
+}
+
+func genAllTaskPath(prefix, taskName string) string {
+	return fmt.Sprintf("%s/%s", prefix, taskName)
+}
+
 // 把task信息保存至etcd
 func (r *Gate) createTask(c *gin.Context) {
+	var req model.Param
+	err := c.ShouldBind(&req)
+	if err != nil {
+		r.error(c, 500, "createTask:%v", err)
+		return
+	}
 
+	taskName := genAllTaskPath(model.AllTaskPrefix, req.Executor.TaskName)
+
+	rsp, err := defaultKVC.Get(r.ctx, taskName, clientv3.WithKeysOnly())
+	if len(rsp.Kvs) > 0 {
+		r.error(c, 500, "duplicate creation:%s", taskName)
+		return
+	}
+
+	all, err := json.Marshal(req)
+	if err != nil {
+		r.error(c, 500, "marshal req:%v", err)
+		return
+	}
+
+	txn := defaultKVC.Txn(r.ctx)
+	txn.If(clientv3.Compare(clientv3.CreateRevision(taskName), "=", 0)).
+		Then(clientv3.OpPut(taskName, string(all))).Else()
+
+	txnRsp, err := txn.Commit()
+	if err != nil {
+		r.error(c, 500, "事务执行失败err :%v", err)
+		return
+	}
+
+	if !txnRsp.Succeeded {
+		r.error(c, 500, "事务失败")
+		return
+	}
+
+	r.ok(c) //返回正确业务码
 }
 
 // 删除etcd里面task信息，也直接下发命令更新runtime里面信息
@@ -141,6 +199,7 @@ func (r *Gate) stopTask(c *gin.Context) {
 // 该模块入口函数
 func (r *Gate) SubMain() {
 	if err := r.init(); err != nil {
+		// init是必须要满足的条件，不成功直接panic
 		panic(err.Error())
 	}
 
