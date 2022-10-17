@@ -10,5 +10,5 @@ const (
 	TASK_CREATE_URL = "/scheduler/task/"
 	TASK_DELETE_URL = "/scheduler/task/"
 	TASK_UPDATE_URL = "/scheduler/task/"
-	TASK_CANCEL_URL = "/scheduler/task/cancel"
+	TASK_STOP_URL   = "/scheduler/task/stop"
 )

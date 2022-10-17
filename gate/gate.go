@@ -134,7 +134,7 @@ func (r *Gate) updateTask(c *gin.Context) {
 }
 
 // 更新etcd里面的task信息，置为静止，下发命令取消正在执行中的task
-func (r *Gate) cancelTask(c *gin.Context) {
+func (r *Gate) stopTask(c *gin.Context) {
 
 }
 
@@ -149,7 +149,7 @@ func (r *Gate) SubMain() {
 	g.POST(model.TASK_CREATE_URL, r.createTask)
 	g.DELETE(model.TASK_DELETE_URL, r.deleteTask)
 	g.PUT(model.TASK_UPDATE_URL, r.updateTask)
-	g.POST(model.TASK_CANCEL_URL, r.cancelTask)
+	g.POST(model.TASK_STOP_URL, r.stopTask)
 
 	g.Run()
 }

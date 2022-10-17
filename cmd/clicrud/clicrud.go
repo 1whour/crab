@@ -8,6 +8,11 @@ import (
 	"github.com/guonaihong/gout"
 )
 
+type CrudOpt struct {
+	FileName string   `clop:"short;long" usage:"config filename" valid:"required"`
+	GateAddr []string `clop:"short;long" usage:"gate address" valid:"required"`
+}
+
 // fileName是需要打开的文件名
 // url是gate服务的地址
 func Crud(fileName string, url string, method string) error {

@@ -1,11 +1,12 @@
 package main
 
 import (
+	"github.com/gnh123/scheduler/cmd/rm"
+	"github.com/gnh123/scheduler/cmd/start"
+	"github.com/gnh123/scheduler/cmd/stop"
+	"github.com/gnh123/scheduler/cmd/update"
 	"github.com/gnh123/scheduler/gate"
-	"github.com/gnh123/scheduler/rm"
 	"github.com/gnh123/scheduler/runtime"
-	"github.com/gnh123/scheduler/start"
-	"github.com/gnh123/scheduler/stop"
 	"github.com/guonaihong/clop"
 )
 
@@ -18,8 +19,10 @@ type scheduler struct {
 	start.Start `clop:"subcommand" usage:"Start the current task from a configuration file"`
 	// 加载配置文件中停止当前任务
 	stop.Stop `clop:"subcommand" usage:"Stop current task from configuration file"`
-	// 从集团中删除当前任务
+	// 从集群中删除当前任务
 	rm.Rm `clop:"subcommand" usage:"Remove current task from configuration file"`
+	// 使用新配置替换集群中的配置文件
+	update.Update `clop:"subcommand" usage:"Update current task from configuration file"`
 }
 
 func main() {
