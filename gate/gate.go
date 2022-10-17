@@ -38,7 +38,6 @@ type Gate struct {
 	ctx context.Context
 }
 
-// 如果当前
 var (
 	conns         sync.Map
 	defautlClient *clientv3.Client
@@ -123,7 +122,7 @@ func (r *Gate) stream(c *gin.Context) {
 	}
 }
 
-func (r *Gate) ok(c *gin.Context) {
+func (r *Gate) ok(c *gin.Context, msg string) {
 	r.Debug().Caller(1).Msg(msg)
 	c.JSON(200, gin.H{"code": 0, "message": ""})
 }
@@ -178,7 +177,7 @@ func (r *Gate) createTask(c *gin.Context) {
 		return
 	}
 
-	r.ok(c) //返回正确业务码
+	r.ok(c, "createTask 执行成功") //返回正确业务码
 }
 
 // 删除etcd里面task信息，也直接下发命令更新runtime里面信息

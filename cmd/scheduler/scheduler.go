@@ -6,6 +6,7 @@ import (
 	"github.com/gnh123/scheduler/cmd/stop"
 	"github.com/gnh123/scheduler/cmd/update"
 	"github.com/gnh123/scheduler/gate"
+	"github.com/gnh123/scheduler/mjobs"
 	"github.com/gnh123/scheduler/runtime"
 	"github.com/guonaihong/clop"
 )
@@ -23,6 +24,8 @@ type scheduler struct {
 	rm.Rm `clop:"subcommand" usage:"Remove current task from configuration file"`
 	// 使用新配置替换集群中的配置文件
 	update.Update `clop:"subcommand" usage:"Update current task from configuration file"`
+	// mjobs子命令，负责任务分发，故障转移
+	mjobs.Mjobs `clop:"subcommand" usage:"mjobs"`
 }
 
 func main() {
