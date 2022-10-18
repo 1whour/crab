@@ -3,8 +3,11 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
+	"sort"
 	"sync"
+	"time"
 
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/slog"
@@ -27,10 +30,15 @@ type Runtime struct {
 
 	ctx context.Context
 	*slog.Slog
-	addr sync.Map
+
+	sync.RWMutex
+	addr     map[string]string
+	currNode string
 }
 
 func (r *Runtime) init() (err error) {
+	rand.Seed(time.Now().UnixNano())
+
 	r.Slog = slog.New(os.Stdout).SetLevel(r.Level)
 
 	if len(r.EtcdAddr) == 0 && len(r.GateAddr) == 0 {
@@ -48,12 +56,13 @@ func (r *Runtime) init() (err error) {
 		}
 
 		for _, kv := range rsp.Kvs {
-			r.addr.Store(kv.Value, kv.Key)
+			// 从etcd里面获取gate ip
+			r.addr[string(kv.Value)] = string(kv.Key)
 		}
 	}
 
 	for i, a := range r.GateAddr {
-		r.addr.Store(a, fmt.Sprintf("endpoint index:%d", i))
+		r.addr[a] = fmt.Sprintf("endpoint index:%d", i)
 	}
 
 	return nil
@@ -89,7 +98,7 @@ func (r *Runtime) readLoop(conn *websocket.Conn) error {
 
 }
 
-func (r *Runtime) createConntion(gateAddr string, val string) {
+func (r *Runtime) createConntion(gateAddr string) {
 
 	c, _, err := websocket.DefaultDialer.Dial(gateAddr+"/"+model.TASK_STREAM_URL, nil)
 	if err != nil {
@@ -102,17 +111,24 @@ func (r *Runtime) createConntion(gateAddr string, val string) {
 }
 
 // 初始化时创建
-func (r *Runtime) createMultipleConn() {
-	r.addr.Range(func(key, val any) bool {
-		go r.createConntion(key.(string), val.(string))
-		return true
-	})
+// 只创建一个长连接，故意这么设计
+// 为是简化gate广播发送的逻辑, 一个runtime只会连一个gate，并且只有一个连接，不需要考虑去重
+func (r *Runtime) createConnRand() {
+	addrs := make([]string, 0, len(r.addr))
+	//go r.createConntion(key.(string), val.(string))
+	for _, ip := range addrs {
+		addrs = append(addrs, ip)
+	}
+
+	sort.Strings(addrs)
+	index := rand.Int31n(int32(len(addrs)))
+	go r.createConntion(addrs[index])
 }
 
 // 该模块的入口函数
 func (r *Runtime) SubMain() {
 
 	r.init()
-	r.createMultipleConn()
+	r.createConnRand()
 	r.watchGateNode()
 }

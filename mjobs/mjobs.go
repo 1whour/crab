@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
-	"go.etcd.io/etcd/clientv3/concurrency"
 )
 
 // mjobs管理task
@@ -54,7 +53,7 @@ func (m *Mjobs) init() (err error) {
 
 func (m *Mjobs) watchTask() {
 
-	readGateNode := defautlClient.Watch(m.ctx, model.AllTaskPrefix, clientv3.WithPrefix())
+	readGateNode := defautlClient.Watch(m.ctx, model.GlobalTaskPrefix, clientv3.WithPrefix())
 	for ersp := range readGateNode {
 		for _, ev := range ersp.Events {
 			switch {
@@ -67,6 +66,8 @@ func (m *Mjobs) watchTask() {
 	}
 }
 
+// 从watch里面读取任务，当任务满足一定条件，比如满足一定条数，满足一定时间
+// 先获取分布式锁，然后把任务打散到对应的gate节点，该节点负责推送到runtime节点
 func (m *Mjobs) readLoop() {
 
 	tk := time.NewTicker(time.Second)

@@ -71,7 +71,7 @@ func (r *Gate) getAddress() string {
 	return ""
 }
 
-func (r *Gate) genEtcdPath() string {
+func (r *Gate) genNodePath() string {
 	return fmt.Sprintf("%s/%s", model.GateNodePrefix, r.Name)
 }
 
@@ -89,7 +89,7 @@ func (r *Gate) register() error {
 	}
 
 	// 注册自己的节点信息
-	_, err = defautlClient.Put(r.ctx, r.genEtcdPath(), r.ServerAddr, clientv3.WithLease(leaseID))
+	_, err = defautlClient.Put(r.ctx, r.genNodePath(), r.ServerAddr, clientv3.WithLease(leaseID))
 	return err
 }
 
@@ -148,7 +148,7 @@ func (r *Gate) createTask(c *gin.Context) {
 		return
 	}
 
-	taskName := genAllTaskPath(model.AllTaskPrefix, req.Executor.TaskName)
+	taskName := genAllTaskPath(model.GlobalTaskPrefix, req.Executor.TaskName)
 
 	rsp, err := defaultKVC.Get(r.ctx, taskName, clientv3.WithKeysOnly())
 	if len(rsp.Kvs) > 0 {
