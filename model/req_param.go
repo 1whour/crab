@@ -8,6 +8,22 @@ type Param struct {
 	Executer   ExecuterParam `json:"executor" yaml:"executor"`
 }
 
+func (p *Param) IsCreate() bool {
+	return p.Action == "create"
+}
+
+func (p *Param) IsRemove() bool {
+	return p.Action == "remove"
+}
+
+func (p *Param) IsStop() bool {
+	return p.Action == "stop"
+}
+
+func (p *Param) IsUpdate() bool {
+	return p.Action == "update"
+}
+
 type ExecuterParam struct {
 	TaskName string `yaml:"task_name" json:"task_name" binding:"required"` //自定义执行器，需要给到TaskName
 	HTTP     *HTTP  `yaml:"http" json:"http"`                              //http包

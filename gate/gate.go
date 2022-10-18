@@ -135,7 +135,7 @@ func (r *Gate) error(c *gin.Context, code int, format string, a ...any) {
 	c.JSON(500, gin.H{"code": code, "message": msg})
 }
 
-func genAllTaskPath(prefix, taskName string) string {
+func genGlobalTaskPath(prefix, taskName string) string {
 	return fmt.Sprintf("%s/%s", prefix, taskName)
 }
 
@@ -148,7 +148,7 @@ func (r *Gate) createTask(c *gin.Context) {
 		return
 	}
 
-	taskName := genAllTaskPath(model.GlobalTaskPrefix, req.Executer.TaskName)
+	taskName := genGlobalTaskPath(model.GlobalTaskPrefix, req.Executer.TaskName)
 
 	rsp, err := defaultKVC.Get(r.ctx, taskName, clientv3.WithKeysOnly())
 	if len(rsp.Kvs) > 0 {

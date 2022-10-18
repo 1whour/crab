@@ -37,10 +37,11 @@ type Runtime struct {
 	ctx          context.Context
 	*slog.Slog
 
+	muWc sync.Mutex //保护多个go程写同一个conn
+
 	sync.RWMutex
-	muWc     sync.Mutex
-	addrs    map[string]string
-	currNode string
+	exec  sync.Map
+	addrs map[string]string
 }
 
 func (r *Runtime) init() (err error) {
@@ -128,6 +129,49 @@ func (r *Runtime) writeResult(conn *websocket.Conn, to time.Duration, result str
 	return err
 }
 
+func (r *Runtime) removeFromExec(param *model.Param) error {
+	e, ok := r.exec.Load(param.Executer.TaskName)
+	if !ok {
+		return fmt.Errorf("not found taskName:%s", param.Executer.TaskName)
+	}
+	err := e.(executer.Executer).Stop()
+	r.exec.Delete(param.Executer.TaskName)
+	return err
+}
+
+func (r *Runtime) createToExec(param *model.Param) error {
+	e, err := executer.CreateExecuter(r.ctx, param)
+	if err != nil {
+		r.Error().Msgf("param.TaskName(%s) create fail:%s\n", param.Executer.TaskName, err)
+		return err
+	}
+
+	if err := e.Run(); err != nil {
+		return err
+	}
+	r.exec.Store(param.Executer.TaskName, e)
+	return nil
+}
+
+func (r *Runtime) runCrud(conn *websocket.Conn, param *model.Param) (err error) {
+
+	switch {
+	case param.IsCreate():
+		// 创建执行器
+		err = r.createToExec(param)
+	case param.IsRemove(), param.IsStop():
+		// 删除和stop对于runtime是一样，停止当前运行的，然后从sync.Map删除
+		err = r.removeFromExec(param)
+	case param.IsUpdate():
+		// 先删除
+		if err = r.removeFromExec(param); err != nil {
+			return err
+		}
+		err = r.createToExec(param)
+	}
+	return err
+}
+
 // 接受来自gate服务的命令, 执行并返回结果
 func (r *Runtime) readLoop(conn *websocket.Conn) error {
 
@@ -140,15 +184,10 @@ func (r *Runtime) readLoop(conn *websocket.Conn) error {
 		}
 
 		go func() {
-			// TODO 区分下是创建还是取消
-			e, err := executer.CreateExecuter(r.ctx, &param)
-			if err != nil {
-				r.Error().Msgf("param.TaskName(%s) create fail:%s\n", param.Executer.TaskName, err)
+			if err := r.runCrud(conn, &param); err != nil {
 				r.writeError(conn, r.WriteTimeout, 1, err.Error())
 				return
-				//TODO
 			}
-			e.Run()
 		}()
 	}
 
@@ -169,8 +208,8 @@ func (r *Runtime) createConntion(gateAddr string) error {
 		return err
 	}
 
-	go r.readLoop(c)
-	return nil
+	go func() {}()
+	return r.readLoop(c)
 }
 
 // 初始化时创建 只创建一个长连接
