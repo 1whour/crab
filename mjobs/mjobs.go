@@ -52,23 +52,23 @@ func (m *Mjobs) init() (err error) {
 }
 
 type kv struct {
-	key []byte
-	val []byte
+	key string
+	val string
 }
 
-func (m *Mjobs) watchGlobalTask() {
+func (m *Mjobs) watchGlobalTaskState() {
 
-	readGateNode := defautlClient.Watch(m.ctx, model.GlobalTaskPrefix, clientv3.WithPrefix())
+	readGateNode := defautlClient.Watch(m.ctx, model.GlobalTaskPrefixState, clientv3.WithPrefix())
 	for ersp := range readGateNode {
 		for _, ev := range ersp.Events {
 			switch {
 			case ev.IsCreate():
-				m.taskChan <- kv{key: ev.Kv.Key, val: ev.Kv.Value}
+				m.taskChan <- kv{key: string(ev.Kv.Key), val: string(ev.Kv.Value)}
 				// 创建新的read/write loop
 			case ev.IsModify():
-				m.Debug().Msgf("update global task:%s\n", ev.Kv.Key)
+				m.Debug().Msgf("update global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
 			case ev.Type == clientv3.EventTypeDelete:
-				m.Debug().Msgf("delete global task:%s\n", ev.Kv.Key)
+				m.Debug().Msgf("delete global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
 			}
 		}
 	}
@@ -109,6 +109,16 @@ func (m *Mjobs) readLoop() {
 	}
 }
 
+// 单机任务
+func (m *Mjobs) oneRuntime() {
+
+}
+
+// 广播任务
+func (m *Mjobs) broadcast() {
+
+}
+
 func (m *Mjobs) watchRuntimeNode() {
 	rsp, err := defaultKVC.Get(m.ctx, model.RuntineNodePrfix, clientv3.WithPrefix())
 	if err == nil {
@@ -137,6 +147,7 @@ func (m *Mjobs) watchRuntimeNode() {
 
 // 分配任务的逻辑，使用分布式锁
 func (m *Mjobs) assign(oneTask chan kv) {
+
 	s, _ := concurrency.NewSession(defautlClient)
 	defer s.Close()
 
@@ -144,8 +155,27 @@ func (m *Mjobs) assign(oneTask chan kv) {
 	defer cancel()
 	l := concurrency.NewMutex(s, model.AssignTaskMutex)
 	l.Lock(ctx)
+	all := make([]kv, 0, len(oneTask))
 
 	for kv := range oneTask {
+		taskName := model.TaskNameFromStatePath(kv.key)
+		if taskName == "" {
+			m.Debug().Msgf("taskName is empty, %s\n", kv.key)
+			continue
+		}
+
+		statePath := model.FullGlobalTaskStatePath(taskName)
+		rsp, err := defaultKVC.Get(m.ctx, statePath)
+		if err != nil {
+			m.Error().Msgf("get global task state %s, path %s\n", err, statePath)
+			continue
+		}
+
+		val := string(rsp.Kvs[0].Value)
+		if val == model.Running || val == model.Stop {
+			continue
+		}
+		all = append(all, taskName)
 	}
 
 	l.Unlock(ctx)
@@ -155,5 +185,5 @@ func (m *Mjobs) assign(oneTask chan kv) {
 func (m *Mjobs) SubMain() {
 	m.init()
 	go m.watchRuntimeNode()
-	m.watchGlobalTask()
+	m.watchGlobalTaskState()
 }

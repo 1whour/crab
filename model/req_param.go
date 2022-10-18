@@ -3,9 +3,29 @@ package model
 import "time"
 
 type Param struct {
-	APIVersion string        `yaml:"apiVersion" binding:"required" json:"api_version"`
-	Action     string        `yaml:"action" json:"action"` // create, stop, rm, update
-	Executer   ExecuterParam `json:"executor" yaml:"executor"`
+	//api的版本号, 如果有不兼容的修改，直接修改这个字段就行
+	APIVersion string `yaml:"apiVersion" binding:"required" json:"api_version"`
+	//oneRuntime, broadcast
+	Kind string `yaml:"kind" json:"kind" binding:"required"`
+	//create, stop, rm, update, gate会修改这个字段，传递到runtime
+	Action   string        `yaml:"action" json:"action"`
+	Executer ExecuterParam `json:"executor" yaml:"executor"`
+}
+
+func (p *Param) SetCreate() {
+	p.Action = "create"
+}
+
+func (p *Param) SetRemove() {
+	p.Action = "remove"
+}
+
+func (p *Param) SetStop() {
+	p.Action = "stop"
+}
+
+func (p *Param) SetUpdate() {
+	p.Action = "update"
 }
 
 func (p *Param) IsCreate() bool {
@@ -60,23 +80,6 @@ type Grpc struct {
 type Shell struct {
 	Command string   //命令
 	Args    []string //命令分割成数组形式
-}
-
-// 调度器发给执行器的包
-type HTTP struct {
-	Scheme  string      `yaml:"scheme"` //https还是http，默认是http
-	Host    string      `yaml:"host"`   //是连接的主机名，默认是调度器的ip
-	Port    int         `yaml:"port"`   //端口
-	Path    string      `yaml:"path"`
-	Method  string      `yaml:"method"`  //get post delete
-	Querys  []NameValue `yaml:"querys"`  //存放查询字符串
-	Headers []NameValue `yaml:"headers"` //存放http header
-	Body    string      `yaml:"body"`    //存放body
-}
-
-type NameValue struct {
-	Name  string
-	Value string
 }
 
 // 控制相关参数

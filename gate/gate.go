@@ -135,10 +135,6 @@ func (r *Gate) error(c *gin.Context, code int, format string, a ...any) {
 	c.JSON(500, gin.H{"code": code, "message": msg})
 }
 
-func genGlobalTaskPath(prefix, taskName string) string {
-	return fmt.Sprintf("%s/%s", prefix, taskName)
-}
-
 // 把task信息保存至etcd
 func (r *Gate) createTask(c *gin.Context) {
 	var req model.Param
@@ -148,11 +144,13 @@ func (r *Gate) createTask(c *gin.Context) {
 		return
 	}
 
-	taskName := genGlobalTaskPath(model.GlobalTaskPrefix, req.Executer.TaskName)
+	globalTaskName := model.FullGlobalTaskPath(req.Executer.TaskName)
+	globalTaskStateName := model.FullGlobalTaskStatePath(req.Executer.TaskName)
 
-	rsp, err := defaultKVC.Get(r.ctx, taskName, clientv3.WithKeysOnly())
+	// 先get，如果有值直接返回
+	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
 	if len(rsp.Kvs) > 0 {
-		r.error(c, 500, "duplicate creation:%s", taskName)
+		r.error(c, 500, "duplicate creation:%s", globalTaskName)
 		return
 	}
 
@@ -163,8 +161,11 @@ func (r *Gate) createTask(c *gin.Context) {
 	}
 
 	txn := defaultKVC.Txn(r.ctx)
-	txn.If(clientv3.Compare(clientv3.CreateRevision(taskName), "=", 0)).
-		Then(clientv3.OpPut(taskName, string(all))).Else()
+	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", 0)).
+		Then(
+			clientv3.OpPut(globalTaskName, string(all)),
+			clientv3.OpPut(globalTaskStateName, model.CanRun),
+		).Else()
 
 	txnRsp, err := txn.Commit()
 	if err != nil {

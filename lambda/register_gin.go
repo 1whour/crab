@@ -78,7 +78,7 @@ func (c *Client) httpWriteErr(hcode int, ctx *gin.Context, code int, msg string)
 
 // 运行handler的函数
 func (c *Client) run(ctx *gin.Context) {
-	var req model.ExecutorParam
+	var req model.Param
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		c.httpWriteErr(http.StatusInternalServerError, ctx, ecodeRun, err.Error())
@@ -86,9 +86,9 @@ func (c *Client) run(ctx *gin.Context) {
 	}
 
 	c.Lock()
-	call, ok := c.call[req.TaskName]
+	call, ok := c.call[req.Executer.TaskName]
 	if !ok { // 不存在
-		c.httpWriteErr(http.StatusNotFound, ctx, ecodeNotFound, fmt.Sprintf("找不到task:%s", req.TaskName))
+		c.httpWriteErr(http.StatusNotFound, ctx, ecodeNotFound, fmt.Sprintf("找不到task:%s", req.Executer.TaskName))
 		c.Unlock()
 		return
 	}
@@ -110,7 +110,7 @@ func (c *Client) run(ctx *gin.Context) {
 	c.Lock()
 
 	call.state = Unused
-	c.call[req.TaskName] = call
+	c.call[req.Executer.TaskName] = call
 
 	call.cancel() //排掉
 	c.Unlock()
@@ -118,7 +118,7 @@ func (c *Client) run(ctx *gin.Context) {
 
 // 取消现在运行中的函数
 func (c *Client) cancel(ctx *gin.Context) {
-	var req model.ExecutorParam
+	var req model.Param
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		c.httpWriteErr(http.StatusInternalServerError, ctx, ecodeCancel, err.Error())
@@ -127,7 +127,7 @@ func (c *Client) cancel(ctx *gin.Context) {
 
 	c.Lock()
 	defer c.Unlock()
-	call := c.call[req.TaskName]
+	call := c.call[req.Executer.TaskName]
 
 	// 利用cancel取消正在运行中的task
 	if call.state == Running {
