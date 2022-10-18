@@ -8,7 +8,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/guonaihong/clop v0.2.7
 	github.com/guonaihong/gout v0.3.1
-	github.com/guonaihong/gstl v0.0.1
+	github.com/guonaihong/gstl v0.0.2
 	github.com/rs/zerolog v1.28.0
 	github.com/stretchr/testify v1.7.1
 	go.etcd.io/etcd/client/v3 v3.5.5

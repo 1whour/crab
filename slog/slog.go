@@ -31,6 +31,12 @@ func (s *Slog) SetLevel(level string) *Slog {
 	return s
 }
 
+// 设置字段，一般是进程初始化级别才需要设置
+func (s *Slog) Str(key, val string) *Slog {
+	s.Logger = s.Logger.With().Str(key, val).Logger()
+	return s
+}
+
 func (s *Slog) Debug() *event {
 	return &event{s.Logger.Debug()}
 }

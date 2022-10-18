@@ -3,9 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"os"
-	"sort"
 	"sync"
 	"time"
 
@@ -16,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/guonaihong/gstl/cmp"
+	"github.com/guonaihong/gstl/mapex"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -45,7 +44,6 @@ type Runtime struct {
 }
 
 func (r *Runtime) init() (err error) {
-	rand.Seed(time.Now().UnixNano())
 
 	// 如果节点名为空，默认给个uuid
 	if r.Name == "" {
@@ -223,18 +221,14 @@ func (r *Runtime) createConnRand() {
 	for {
 
 		r.Lock()
-		addrs := make([]string, 0, len(r.addrs))
-		for _, ip := range addrs {
-			addrs = append(addrs, ip)
-		}
+		addrs := mapex.Kyes(r.addrs)
 		r.Unlock()
 
-		sort.Strings(addrs)
-		index := rand.Int31n(int32(len(addrs)))
+		addr := utils.SliceRandOne(addrs)
 
 		for i := 0; i < 2; i++ {
 
-			if err := r.createConntion(addrs[index]); err != nil {
+			if err := r.createConntion(addr); err != nil {
 				// 如果握手或者上传第一个包失败，sleep 下，再重连一次
 				time.Sleep(interval)
 				interval *= 2
