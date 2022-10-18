@@ -14,7 +14,7 @@ func init() {
 type grpcExecuter struct {
 }
 
-func (s *grpcExecuter) Cancel() error {
+func (s *grpcExecuter) Stop() error {
 	return nil
 }
 
@@ -22,6 +22,6 @@ func (s *grpcExecuter) Run() error {
 	return nil
 }
 
-func createGRPCExecuter(ctx context.Context, param *model.ExecutorParam) Executer {
+func createGRPCExecuter(ctx context.Context, param *model.Param) Executer {
 	return nil
 }

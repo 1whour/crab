@@ -23,7 +23,7 @@ type httpExecuter struct {
 	req    *dataflow.Gout     //http client
 	ctx    context.Context    //新生成的ctx
 	cancel context.CancelFunc //取消用的cancel
-	param  *model.ExecutorParam
+	param  *model.ExecuterParam
 }
 
 // 运行
@@ -73,16 +73,16 @@ func (h *httpExecuter) Run() error {
 }
 
 // cancel
-func (h *httpExecuter) Cancel() error {
+func (h *httpExecuter) Stop() error {
 	h.cancel()
 	return nil
 }
 
-func createHTTPExecuter(ctx context.Context, param *model.ExecutorParam) Executer {
+func createHTTPExecuter(ctx context.Context, param *model.Param) Executer {
 	h := &httpExecuter{}
 	h.ctx, h.cancel = context.WithCancel(ctx)
 
-	h.param = param
+	h.param = &param.Executer
 	h.req = gout.New()
 	return h
 }

@@ -15,7 +15,7 @@ type shellExecuter struct {
 	cmd *exec.Cmd
 }
 
-func (s *shellExecuter) Cancel() error {
+func (s *shellExecuter) Stop() error {
 	return s.cmd.Process.Kill()
 }
 
@@ -23,10 +23,10 @@ func (s *shellExecuter) Run() error {
 	return s.cmd.Run()
 }
 
-func createShellExecuter(ctx context.Context, param *model.ExecutorParam) Executer {
+func createShellExecuter(ctx context.Context, param *model.Param) Executer {
 	s := &shellExecuter{}
 
-	shellParam := param.Shell
+	shellParam := param.Executer.Shell
 
 	if len(shellParam.Command) > 0 {
 		s.cmd = exec.CommandContext(ctx, "bash", "-c", shellParam.Command)

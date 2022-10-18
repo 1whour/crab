@@ -9,14 +9,14 @@ import (
 )
 
 type Executer interface {
-	Run() error    //运行
-	Cancel() error //取消
+	Run() error  //运行
+	Stop() error //取消
 }
 
 // key是执行器的名字，value是执行器的构造函数
 var executerPlugin sync.Map
 
-type createHandler func(ctx context.Context, param *model.ExecutorParam) Executer
+type createHandler func(ctx context.Context, param *model.Param) Executer
 
 func Register(name string, create createHandler) {
 	_, ok := executerPlugin.LoadOrStore(name, create)
@@ -25,10 +25,10 @@ func Register(name string, create createHandler) {
 	}
 }
 
-func CreateExecuter(ctx context.Context, param *model.ExecutorParam) (e Executer, err error) {
-	e2, ok := executerPlugin.Load(param.Name())
+func CreateExecuter(ctx context.Context, param *model.Param) (e Executer, err error) {
+	e2, ok := executerPlugin.Load(param.Executer.Name())
 	if !ok {
-		return nil, errors.New("not found:" + param.Name())
+		return nil, errors.New("not found:" + param.Executer.Name())
 	}
 
 	return e2.(createHandler)(ctx, param), nil

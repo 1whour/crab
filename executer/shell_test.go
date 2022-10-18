@@ -18,8 +18,8 @@ func TestShellExecuter(t *testing.T) {
     - echo
     - "hello"
   `
-	var param model.ExecutorParam
-	err := yaml.Unmarshal([]byte(conf), &param)
+	var param model.Param
+	err := yaml.Unmarshal([]byte(conf), &param.Executer)
 	assert.NoError(t, err)
 
 	err = createShellExecuter(context.TODO(), &param).Run()

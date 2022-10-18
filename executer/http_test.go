@@ -48,9 +48,9 @@ http:
 	s = strings.Replace(s, "127.0.0.1", u.Host[:pos], -1)
 	s = strings.Replace(s, "8080", u.Host[pos+1:], -1)
 
-	var param model.ExecutorParam
+	var param model.Param
 
-	err = yaml.Unmarshal([]byte(s), &param)
+	err = yaml.Unmarshal([]byte(s), &param.Executer)
 
 	assert.NoError(t, err)
 	if err != nil {

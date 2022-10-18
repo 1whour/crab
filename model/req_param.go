@@ -4,10 +4,11 @@ import "time"
 
 type Param struct {
 	APIVersion string        `yaml:"apiVersion" binding:"required" json:"api_version"`
-	Executor   ExecutorParam `json:"executor" yaml:"executor"`
+	Action     string        `yaml:"action" json:"action"` // create, stop, rm, update
+	Executer   ExecuterParam `json:"executor" yaml:"executor"`
 }
 
-type ExecutorParam struct {
+type ExecuterParam struct {
 	TaskName string `yaml:"task_name" json:"task_name" binding:"required"` //自定义执行器，需要给到TaskName
 	HTTP     *HTTP  `yaml:"http" json:"http"`                              //http包
 	Shell    *Shell `yaml:"shell" json:"shell"`                            //shell包
@@ -15,11 +16,11 @@ type ExecutorParam struct {
 }
 
 // 判断是通用执行器
-func (p ExecutorParam) IsGeneral() bool {
+func (p ExecuterParam) IsGeneral() bool {
 	return p.HTTP != nil || p.Shell != nil || p.Grpc != nil
 }
 
-func (p ExecutorParam) Name() string {
+func (p ExecuterParam) Name() string {
 	if p.HTTP != nil {
 		return "http"
 	}

@@ -148,7 +148,7 @@ func (r *Gate) createTask(c *gin.Context) {
 		return
 	}
 
-	taskName := genAllTaskPath(model.GlobalTaskPrefix, req.Executor.TaskName)
+	taskName := genAllTaskPath(model.GlobalTaskPrefix, req.Executer.TaskName)
 
 	rsp, err := defaultKVC.Get(r.ctx, taskName, clientv3.WithKeysOnly())
 	if len(rsp.Kvs) > 0 {
