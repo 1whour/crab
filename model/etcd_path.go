@@ -24,9 +24,6 @@ var (
 	//注册的runtime节点信息, 路径后面是runtimeName
 	RuntimeNodePrefix = "/scheduler/runtime"
 
-	//runtime绑定到gate
-	RuntimeBindGate = "/scheduler/runtime/bind/gate"
-
 	//分配task用的分布式锁
 	AssignTaskMutex = "/scheduler/task/assign/mutex"
 )
@@ -37,39 +34,41 @@ const (
 	Stop    = "stop"    //这个任务被中止
 )
 
-// 生成runtime节点的信息
-func FullRuntimeNodePath(runtimeName string) string {
-	return fmt.Sprintf("%s/%s", RuntimeNodePrefix, runtimeName)
+// 生成本地任务队列全路径
+func WatchLocalRuntimePrefix(runtimeName string) string {
+	return fmt.Sprintf("%s/%s", LocalRuntimeTaskPrefix, runtimeName)
 }
 
 // 生成本地任务队列全路径
-func LocalRuntimeTaskPath(runtimeName, taskName string) string {
+func fullLocalRuntimeTask(runtimeName, taskName string) string {
 	return fmt.Sprintf("%s/%s/%s", LocalRuntimeTaskPrefix, runtimeName, taskName)
 }
 
 // runtimeNode转成本地队列
-func RuntimeNodeToLocalTaskPath(fullRuntimeName, taskName string) string {
-	name := takeNameFromPath(fullRuntimeName)
-	return LocalRuntimeTaskPath(name, taskName)
+func RuntimeNodeToLocalTask(fullRuntimeName, taskName string) string {
+	runtimeName := takeNameFromPath(fullRuntimeName)
+	return fullLocalRuntimeTask(runtimeName, taskName)
 }
 
+// 本地队列转成全局队列
+func FullLocalToGlobalTask(fullLocalName string) string {
+	name := takeNameFromPath(fullLocalName)
+	return FullGlobalTask(name)
+}
+
+// 全局队列相关两个辅助函数
 // 生成全局任务队列的路径
-func FullGlobalTaskPath(taskName string) string {
+func FullGlobalTask(taskName string) string {
 	return fmt.Sprintf("%s/%s", GlobalTaskPrefix, taskName)
 }
 
 // 生成全局任务状态队列的路径
-func FullGlobalTaskStatePath(taskName string) string {
+func FullGlobalTaskState(taskName string) string {
 	return fmt.Sprintf("%s/%s", GlobalTaskPrefixState, taskName)
 }
 
-// gate node的信息
-func FullGateNodePath(name string) string {
-	return fmt.Sprintf("%s/%s", GateNodePrefix, name)
-}
-
 // 从状态队列提取taskName
-func TaskNameFromStatePath(fullPath string) string {
+func TaskNameFromState(fullPath string) string {
 	return takeNameFromPath(fullPath)
 }
 
@@ -79,4 +78,14 @@ func takeNameFromPath(fullPath string) string {
 		return ""
 	}
 	return fullPath[pos:]
+}
+
+// gate node的信息
+func FullGateNode(name string) string {
+	return fmt.Sprintf("%s/%s", GateNodePrefix, name)
+}
+
+// 生成runtime node的信息
+func FullRuntimeNode(runtimeName string) string {
+	return fmt.Sprintf("%s/%s", RuntimeNodePrefix, runtimeName)
 }

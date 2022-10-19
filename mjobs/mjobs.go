@@ -30,7 +30,6 @@ type Mjobs struct {
 }
 
 var (
-	conns         sync.Map
 	defautlClient *clientv3.Client
 	defaultKVC    clientv3.KV
 )
@@ -130,7 +129,7 @@ func (m *Mjobs) setTaskToLocalrunq(taskName string, param *model.Param, runtimeN
 func (m *Mjobs) oneRuntime(taskName string, param *model.Param, runtimeNodes []string) (err error) {
 	runtimeNode := utils.SliceRandOne(runtimeNodes)
 	// 向本地队列写入任务
-	ltaskPath := model.RuntimeNodeToLocalTaskPath(runtimeNode, taskName)
+	ltaskPath := model.RuntimeNodeToLocalTask(runtimeNode, taskName)
 	_, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun)
 	return err
 }
@@ -138,7 +137,7 @@ func (m *Mjobs) oneRuntime(taskName string, param *model.Param, runtimeNodes []s
 // 广播任务
 func (m *Mjobs) broadcast(taskName string, param *model.Param) (err error) {
 	m.runtimeNode.Range(func(key, val any) bool {
-		ltaskPath := model.RuntimeNodeToLocalTaskPath(key.(string), taskName)
+		ltaskPath := model.RuntimeNodeToLocalTask(key.(string), taskName)
 		// 向本地队列写入任务
 		_, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun)
 
@@ -179,7 +178,11 @@ func (m *Mjobs) watchRuntimeNode() {
 	}
 }
 
-func (m *Mjson) Failover() {
+// 故障转移
+// 监听runtime node的存活，如果死掉，把任务重新分发下
+// 1.如果是故障转移的广播任务, 按道理，只应该在没有的机器上创建这个任务
+// 2.如果是单runtime任务，任选一个runtime执行
+func (m *Mjobs) failover() {
 
 }
 
@@ -207,13 +210,13 @@ func (m *Mjobs) assign(oneTask chan kv, mutexName string) {
 
 	for kv := range oneTask {
 		// 从状态信息里面获取tastName
-		taskName := model.TaskNameFromStatePath(kv.key)
+		taskName := model.TaskNameFromState(kv.key)
 		if taskName == "" {
 			m.Debug().Msgf("taskName is empty, %s\n", kv.key)
 			continue
 		}
 		// 查看这个task的状态
-		statePath := model.FullGlobalTaskStatePath(taskName)
+		statePath := model.FullGlobalTaskState(taskName)
 		rsp, err := defaultKVC.Get(m.ctx, statePath)
 		if err != nil {
 			m.Error().Msgf("get global task state %s, path %s\n", err, statePath)
@@ -230,7 +233,7 @@ func (m *Mjobs) assign(oneTask chan kv, mutexName string) {
 
 		for _, taskName := range all {
 
-			rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTaskPath(taskName))
+			rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTask(taskName))
 			if err != nil {
 				m.Error().Msgf("get global task path fail:%s\n", err)
 				continue

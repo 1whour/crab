@@ -28,11 +28,12 @@ var upgrader = websocket.Upgrader{}
 type Gate struct {
 	ServerAddr   string        `clop:"short;long" usage:"server address"`
 	AutoFindAddr bool          `clop:"short;long" usage:"Automatically find unused ip:port, Only takes effect when ServerAddr is empty"`
-	EtcdAddr     []string      `clop:"short;long" usage:"etcd address"`
+	EtcdAddr     []string      `clop:"short;long" usage:"etcd address" valid:"required"`
 	NamePrefix   string        `clop:"long" usage:"name prfix"`
 	Name         string        `clop:"short;long" usage:"The name of the gate. If it is not filled, the default is uuid"`
 	Level        string        `clop:"short;long" usage:"log level"`
 	LeaseTime    time.Duration `clop:"long" usage:"lease time" default:"4s"`
+	WriteTime    time.Duration `clop:"long" usage:"write timeout" default"4s"`
 
 	*slog.Slog
 	ctx context.Context
@@ -93,7 +94,7 @@ func (r *Gate) registerGateNode() error {
 	}
 
 	// 注册自己的节点信息
-	_, err = defautlClient.Put(r.ctx, model.FullGateNodePath(r.NodeName()), r.ServerAddr, clientv3.WithLease(leaseID))
+	_, err = defautlClient.Put(r.ctx, model.FullGateNode(r.NodeName()), r.ServerAddr, clientv3.WithLease(leaseID))
 	return err
 }
 
@@ -107,12 +108,56 @@ func (r *Gate) registerRuntimeWithKeepalive(runtimeName string, keepalive chan b
 	// 注册runtime绑定的gate
 
 	// 注册自己的节点信息
-	_, err = defautlClient.Put(r.ctx, model.FullRuntimeNodePath(r.NodeName()), r.ServerAddr, clientv3.WithLease(leaseID))
+	_, err = defautlClient.Put(r.ctx, model.FullRuntimeNode(r.NodeName()), r.ServerAddr, clientv3.WithLease(leaseID))
 	for range keepalive {
 		lease.KeepAliveOnce(r.ctx, leaseID)
 	}
 
 	return nil
+}
+
+func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
+
+	localTask := defautlClient.Watch(r.ctx, model.WatchLocalRuntimePrefix(runtimeName), clientv3.WithPrefix())
+
+	for ersp := range localTask {
+		for _, ev := range ersp.Events {
+
+			key := string(ev.Kv.Key)
+			taskName := model.TaskNameFromState(key)
+			globalKey := model.FullLocalToGlobalTask(key)
+			rsp, err := defaultKVC.Get(r.ctx, globalKey)
+			if err != nil {
+				r.Warn().Msgf("gate.watchLocalRunq: get param %s\n", err)
+				continue
+			}
+
+			value := rsp.Kvs[0].Value
+
+			var param model.Param
+			err = json.Unmarshal(value, &param)
+			if err != nil {
+				r.Warn().Msgf("gate.watchLocalRunq:%s\n", err)
+				continue
+			}
+
+			switch {
+			case ev.IsCreate(), ev.IsModify():
+				if err := utils.WriteMessageTimeout(conn, value, r.WriteTime); err != nil {
+					r.Warn().Msgf("gate.watchLocalRunq, WriteMessageTimeout :%s\n", err)
+					continue
+				}
+
+				if param.IsRemove() {
+					defaultKVC.Delete(r.ctx, globalKey)
+					defaultKVC.Delete(r.ctx, string(key))
+					defaultKVC.Delete(r.ctx, model.FullGlobalTaskState(taskName))
+				}
+			case ev.Type == clientv3.EventTypeDelete:
+				r.Debug().Msgf("delete global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
+			}
+		}
+	}
 }
 
 func (r *Gate) stream(c *gin.Context) {
@@ -140,6 +185,7 @@ func (r *Gate) stream(c *gin.Context) {
 
 		if first {
 			go r.registerRuntimeWithKeepalive(req.Name, keepalive)
+			go r.watchLocalRunq(req.Name, con)
 			first = false
 		} else {
 			keepalive <- true
@@ -179,9 +225,9 @@ func (r *Gate) createTask(c *gin.Context) {
 	}
 
 	// 创建数据队列
-	globalTaskName := model.FullGlobalTaskPath(req.Executer.TaskName)
+	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
 	// 创建状态队列
-	globalTaskStateName := model.FullGlobalTaskStatePath(req.Executer.TaskName)
+	globalTaskStateName := model.FullGlobalTaskState(req.Executer.TaskName)
 
 	// 先get，如果有值直接返回
 	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
@@ -228,9 +274,9 @@ func (r *Gate) deleteTask(c *gin.Context) {
 	}
 
 	// 创建数据队列
-	globalTaskName := model.FullGlobalTaskPath(req.Executer.TaskName)
+	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
 	// 创建状态队列
-	globalTaskStateName := model.FullGlobalTaskStatePath(req.Executer.TaskName)
+	globalTaskStateName := model.FullGlobalTaskState(req.Executer.TaskName)
 
 	// 先get，如果有值直接返回
 	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
@@ -278,9 +324,9 @@ func (r *Gate) updateTask(c *gin.Context) {
 	}
 
 	// 创建数据队列
-	globalTaskName := model.FullGlobalTaskPath(req.Executer.TaskName)
+	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
 	// 创建状态队列
-	globalTaskStateName := model.FullGlobalTaskStatePath(req.Executer.TaskName)
+	globalTaskStateName := model.FullGlobalTaskState(req.Executer.TaskName)
 
 	// 先get，如果有值直接返回
 	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
@@ -329,9 +375,9 @@ func (r *Gate) stopTask(c *gin.Context) {
 	}
 
 	// 创建数据队列
-	globalTaskName := model.FullGlobalTaskPath(req.Executer.TaskName)
+	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
 	// 创建状态队列
-	globalTaskStateName := model.FullGlobalTaskStatePath(req.Executer.TaskName)
+	globalTaskStateName := model.FullGlobalTaskState(req.Executer.TaskName)
 
 	// 先get，如果有值直接返回
 	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
@@ -371,8 +417,7 @@ func (r *Gate) stopTask(c *gin.Context) {
 // 该模块入口函数
 func (r *Gate) SubMain() {
 	if err := r.init(); err != nil {
-		// init是必须要满足的条件，不成功直接panic
-		panic(err.Error())
+		return
 	}
 
 	go r.registerGateNode()
