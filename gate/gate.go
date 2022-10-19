@@ -30,12 +30,17 @@ type Gate struct {
 	ServerAddr   string        `clop:"short;long" usage:"server address"`
 	AutoFindAddr bool          `clop:"short;long" usage:"Automatically find unused ip:port, Only takes effect when ServerAddr is empty"`
 	EtcdAddr     []string      `clop:"short;long" usage:"etcd address"`
+	NamePrefix   string        `clop:"long" usage:"name prfix"`
 	Name         string        `clop:"short;long" usage:"The name of the gate. If it is not filled, the default is uuid"`
 	Level        string        `clop:"short;long" usage:"log level"`
-	LeaseTime    time.Duration `clop:"long" usage:"lease time" default:"10s"`
+	LeaseTime    time.Duration `clop:"long" usage:"lease time" default:"4s"`
 
 	*slog.Slog
 	ctx context.Context
+}
+
+func (g *Gate) NodeName() string {
+	return fmt.Sprintf("%s-%s", g.NamePrefix, g.Name)
 }
 
 var (
@@ -50,6 +55,10 @@ func (r *Gate) init() (err error) {
 	r.Slog = slog.New(os.Stdout).SetLevel(r.Level)
 	if r.Name == "" {
 		r.Name = uuid.New().String()
+	}
+
+	if r.LeaseTime < model.RuntimeKeepalive {
+		r.LeaseTime = model.RuntimeKeepalive + time.Second
 	}
 
 	if defautlClient, err = utils.NewEtcdClient(r.EtcdAddr); err != nil { //初始etcd客户端
@@ -71,13 +80,9 @@ func (r *Gate) getAddress() string {
 	return ""
 }
 
-func (r *Gate) genNodePath() string {
-	return fmt.Sprintf("%s/%s", model.GateNodePrefix, r.Name)
-}
-
 // gate的地址
-// 注册到/scheduler/gate/node/gate_name
-func (r *Gate) register() error {
+// model.GateNodePrefix 注册到/scheduler/gate/node/gate_name
+func (r *Gate) registerGateNode() error {
 	addr := r.getAddress()
 	if addr == "" {
 		panic("The service startup address is empty, please set -s ip:port")
@@ -89,8 +94,24 @@ func (r *Gate) register() error {
 	}
 
 	// 注册自己的节点信息
-	_, err = defautlClient.Put(r.ctx, r.genNodePath(), r.ServerAddr, clientv3.WithLease(leaseID))
+	_, err = defautlClient.Put(r.ctx, model.FullGateNodePath(r.NodeName()), r.ServerAddr, clientv3.WithLease(leaseID))
 	return err
+}
+
+// 注册runtime节点，并负责节点lease的续期
+func (r *Gate) registerRuntimeWithKeepalive(runtimeName string, keepalive chan bool) error {
+	lease, leaseID, err := utils.NewLease(r.ctx, r.Slog, defautlClient, r.LeaseTime)
+	if err != nil {
+		r.Error().Msgf("registerRuntimeWithKeepalive.NewLease fail:%s\n", err)
+		return err
+	}
+
+	// 注册自己的节点信息
+	_, err = defautlClient.Put(r.ctx, model.FullRuntimeNodePath(r.NodeName()), r.ServerAddr, clientv3.WithLease(leaseID))
+	for range keepalive {
+		lease.KeepAliveOnce(r.ctx, leaseID)
+	}
+	return nil
 }
 
 func (r *Gate) stream(c *gin.Context) {
@@ -105,20 +126,32 @@ func (r *Gate) stream(c *gin.Context) {
 	}
 	defer con.Close()
 
+	first := true
+	keepalive := make(chan bool)
 	for {
-		// 读取执行结果，或者心跳
-		mt, message, err := con.ReadMessage()
+		// 读取心跳
+		req := model.Whoami{}
+		err := con.ReadJSON(&req)
 		if err != nil {
 			log.Println("read:", err)
 			break
 		}
 
-		//log.Printf("recv: %s", message)
-		err = con.WriteMessage(mt, message)
-		if err != nil {
-			log.Println("write:", err)
-			break
+		if first {
+			go r.registerRuntimeWithKeepalive(req.Name, keepalive)
+			first = false
+		} else {
+			keepalive <- true
 		}
+
+		// TODO
+		/*
+			err = con.WriteJSON(mt, map[])
+			if err != nil {
+				log.Println("write:", err)
+				break
+			}
+		*/
 	}
 }
 
@@ -202,6 +235,8 @@ func (r *Gate) SubMain() {
 		// init是必须要满足的条件，不成功直接panic
 		panic(err.Error())
 	}
+
+	go r.registerGateNode()
 
 	g := gin.New()
 	g.GET(model.TASK_STREAM_URL, r.stream) //流式接口，主动推送任务至runtime

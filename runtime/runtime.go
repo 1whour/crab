@@ -110,7 +110,14 @@ func (r *Runtime) watchGateNode() {
 	}
 }
 
-// 写回错误的结果
+func (r *Runtime) writeWhoami(conn *websocket.Conn) (err error) {
+	r.muWc.Lock()
+	err = utils.WriteJsonTimeout(conn, model.Whoami{Name: r.Name}, r.WriteTimeout)
+	r.muWc.Lock()
+	return err
+}
+
+// 写回错误的结果, TODO，可能通过http返回
 func (r *Runtime) writeError(conn *websocket.Conn, to time.Duration, code int, msg string) (err error) {
 	r.muWc.Lock()
 	err = utils.WriteJsonTimeout(conn, model.RuntimeResp{Code: code, Message: msg}, to)
@@ -118,7 +125,7 @@ func (r *Runtime) writeError(conn *websocket.Conn, to time.Duration, code int, m
 	return err
 }
 
-// 写回正确的结果
+// 写回正确的结果, TODO, 可能通过http返回
 func (r *Runtime) writeResult(conn *websocket.Conn, to time.Duration, result string) (err error) {
 	// 可能有多个go程写conn，加锁保护下
 	r.Lock()
@@ -175,6 +182,18 @@ func (r *Runtime) readLoop(conn *websocket.Conn) error {
 
 	var param model.Param
 
+	go func() {
+		// 对conn执行心跳检查，conn可能长时间空闲，为是检查conn是否健康，加上心跳
+		for {
+			time.Sleep(model.RuntimeKeepalive)
+			if err := r.writeWhoami(conn); err != nil {
+				r.Warn().Msgf("write whoami:%s\n", err)
+				conn.Close() //关闭conn. ReadJOSN也会出错返回
+				return
+			}
+		}
+	}()
+
 	for {
 		err := conn.ReadJSON(&param) //这里不加超时时间, 一直监听gate推过来的信息
 		if err != nil {
@@ -183,7 +202,7 @@ func (r *Runtime) readLoop(conn *websocket.Conn) error {
 
 		go func() {
 			if err := r.runCrud(conn, &param); err != nil {
-				r.writeError(conn, r.WriteTimeout, 1, err.Error())
+				//r.writeError(conn, r.WriteTimeout, 1, err.Error())
 				return
 			}
 		}()
@@ -221,7 +240,7 @@ func (r *Runtime) createConnRand() {
 	for {
 
 		r.Lock()
-		addrs := mapex.Kyes(r.addrs)
+		addrs := mapex.Keys(r.addrs)
 		r.Unlock()
 
 		addr := utils.SliceRandOne(addrs)

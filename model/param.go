@@ -12,6 +12,14 @@ type Param struct {
 	Executer ExecuterParam `json:"executor" yaml:"executor"`
 }
 
+func (p *Param) IsOneRuntime() bool {
+	return p.Kind == "" || p.Kind == "oneRuntime"
+}
+
+func (p *Param) IsBroadcast() bool {
+	return p.Kind == "broadcast"
+}
+
 func (p *Param) SetCreate() {
 	p.Action = "create"
 }
@@ -70,16 +78,6 @@ func (p ExecuterParam) Name() string {
 	}
 
 	return ""
-}
-
-// grpc 数据包, TODO
-type Grpc struct {
-}
-
-// shell数据包
-type Shell struct {
-	Command string   //命令
-	Args    []string //命令分割成数组形式
 }
 
 // 控制相关参数

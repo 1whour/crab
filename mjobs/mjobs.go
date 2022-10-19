@@ -2,6 +2,7 @@ package mjobs
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"sync"
 	"time"
@@ -109,25 +110,52 @@ func (m *Mjobs) readLoop() {
 	}
 }
 
-// 单机任务
-func (m *Mjobs) oneRuntime() {
+func (m *Mjobs) setTaskToLocalrunq(taskName string, param *model.Param, runtimeNodes []string) (err error) {
+	if param.IsOneRuntime() {
+		err = m.oneRuntime(taskName, param, runtimeNodes)
+	} else if param.IsBroadcast() {
+		err = m.broadcast(taskName, param)
+	} else {
+		m.Warn().Msgf("Unknown kind:%s\n", param.Kind)
+	}
+	return err
+}
 
+// 单机任务
+func (m *Mjobs) oneRuntime(taskName string, param *model.Param, runtimeNodes []string) (err error) {
+	runtimeNode := utils.SliceRandOne(runtimeNodes)
+	// 向本地队列写入任务
+	ltaskPath := model.RuntimeNodeToLocalTaskPath(runtimeNode, taskName)
+	_, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun)
+	return err
 }
 
 // 广播任务
-func (m *Mjobs) broadcast() {
+func (m *Mjobs) broadcast(taskName string, param *model.Param) (err error) {
+	m.runtimeNode.Range(func(key, val any) bool {
+		ltaskPath := model.RuntimeNodeToLocalTaskPath(key.(string), taskName)
+		// 向本地队列写入任务
+		_, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun)
 
+		return err == nil
+	})
+
+	return err
 }
 
+// watch runtime node的变化
 func (m *Mjobs) watchRuntimeNode() {
-	rsp, err := defaultKVC.Get(m.ctx, model.RuntineNodePrfix, clientv3.WithPrefix())
+	// 先一次性获取当前节点
+	rsp, err := defaultKVC.Get(m.ctx, model.RuntimeNodePrefix, clientv3.WithPrefix())
 	if err == nil {
 		for _, e := range rsp.Kvs {
 			m.runtimeNode.Store(string(e.Key), string(e.Value))
 		}
 	}
 
-	runtimeNode := defautlClient.Watch(m.ctx, model.RuntineNodePrfix, clientv3.WithPrefix())
+	// watch节点后续变化
+	// TODO，过滤版本
+	runtimeNode := defautlClient.Watch(m.ctx, model.RuntimeNodePrefix, clientv3.WithPrefix())
 	for ersp := range runtimeNode {
 		for _, ev := range ersp.Events {
 			switch {
@@ -139,6 +167,7 @@ func (m *Mjobs) watchRuntimeNode() {
 				m.Debug().Msgf("Is this key() modified??? Not expected\n", string(ev.Kv.Key))
 			case ev.Type == clientv3.EventTypeDelete:
 				// 被删除
+				// TODO 重新分配队列
 				m.runtimeNode.Delete(string(ev.Kv.Key))
 			}
 		}
@@ -153,17 +182,28 @@ func (m *Mjobs) assign(oneTask chan kv) {
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*5)
 	defer cancel()
+
+	// 创建分布式锁
 	l := concurrency.NewMutex(s, model.AssignTaskMutex)
+	all := make([]string, 0, len(oneTask))
+
 	l.Lock(ctx)
-	all := make([]kv, 0, len(oneTask))
+	defer l.Unlock(ctx)
+
+	var runtimeNodes []string
+	m.runtimeNode.Range(func(key, value any) bool {
+		runtimeNodes = append(runtimeNodes, key.(string))
+		return true
+	})
 
 	for kv := range oneTask {
+		// 从状态信息里面获取tastName
 		taskName := model.TaskNameFromStatePath(kv.key)
 		if taskName == "" {
 			m.Debug().Msgf("taskName is empty, %s\n", kv.key)
 			continue
 		}
-
+		// 查看这个task的状态
 		statePath := model.FullGlobalTaskStatePath(taskName)
 		rsp, err := defaultKVC.Get(m.ctx, statePath)
 		if err != nil {
@@ -175,10 +215,30 @@ func (m *Mjobs) assign(oneTask chan kv) {
 		if val == model.Running || val == model.Stop {
 			continue
 		}
+		// 可以直接执行的taskName
 		all = append(all, taskName)
-	}
 
-	l.Unlock(ctx)
+		for _, taskName := range all {
+
+			rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTaskPath(taskName))
+			if err != nil {
+				m.Error().Msgf("get global task path fail:%s\n", err)
+				continue
+			}
+
+			param := model.Param{}
+			err = json.Unmarshal(rsp.Kvs[0].Value, &param)
+			if err != nil {
+				m.Error().Msgf("Unmarshal global task fail:%s\n", err)
+				continue
+			}
+
+			if err = m.setTaskToLocalrunq(taskName, &param, runtimeNodes); err != nil {
+				m.Error().Msgf("set task to local runq fail:%s\n", err)
+				continue
+			}
+		}
+	}
 }
 
 // mjobs子命令的的入口函数

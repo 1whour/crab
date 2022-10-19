@@ -36,3 +36,11 @@ func NewLeaseWithKeepalive(ctx context.Context, log *slog.Slog, client *clientv3
 
 	return leaseID, nil
 }
+
+func NewLease(ctx context.Context, log *slog.Slog, client *clientv3.Client, ttl time.Duration) (clientv3.Lease, clientv3.LeaseID, error) {
+	// 创建一个lease对象
+	lease := clientv3.NewLease(client)
+	// 申请一个ttl/time.Second的lease
+	leaseGrantResp, err := lease.Grant(ctx, int64(ttl/time.Second))
+	return lease, leaseGrantResp.ID, err
+}

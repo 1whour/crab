@@ -1,7 +1,7 @@
 package model
 
 // runtime连接到gate，第一个包推带节点名
-type RuntimeWhoami struct {
+type Whoami struct {
 	Name string `json:"name"`
 }
 
