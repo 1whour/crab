@@ -64,10 +64,13 @@ func (m *Mjobs) watchGlobalTaskState() {
 		for _, ev := range ersp.Events {
 			switch {
 			case ev.IsCreate():
+				m.Debug().Msgf("create global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
 				m.taskChan <- kv{key: string(ev.Kv.Key), val: string(ev.Kv.Value)}
-				// 创建新的read/write loop
+
 			case ev.IsModify():
 				m.Debug().Msgf("update global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
+				m.taskChan <- kv{key: string(ev.Kv.Key), val: string(ev.Kv.Value)}
+
 			case ev.Type == clientv3.EventTypeDelete:
 				m.Debug().Msgf("delete global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
 			}
@@ -77,7 +80,7 @@ func (m *Mjobs) watchGlobalTaskState() {
 
 // 从watch里面读取创建任务，当任务满足一定条件，比如满足一定条数，满足一定时间
 // 先获取分布式锁，然后把任务打散到对应的gate节点，该节点负责推送到runtime节点
-func (m *Mjobs) readLoop() {
+func (m *Mjobs) taskLoop() {
 
 	tk := time.NewTicker(time.Second)
 
@@ -93,9 +96,11 @@ func (m *Mjobs) readLoop() {
 			select {
 			case oneTask <- t:
 			default:
+				//执行到default，说明chan已经被灌满
 				goto proc
 			}
 		case <-tk.C:
+			//或者超时
 			goto proc
 		}
 
@@ -103,7 +108,7 @@ func (m *Mjobs) readLoop() {
 		if false {
 			if len(oneTask) > 0 {
 				close(oneTask)
-				go m.assign(oneTask)
+				go m.assign(oneTask, model.AssignTaskMutex)
 				oneTask = createOneTask()
 			}
 		}
@@ -143,7 +148,7 @@ func (m *Mjobs) broadcast(taskName string, param *model.Param) (err error) {
 	return err
 }
 
-// watch runtime node的变化
+// watch runtime node的变化, 把node信息同步到内存里面
 func (m *Mjobs) watchRuntimeNode() {
 	// 先一次性获取当前节点
 	rsp, err := defaultKVC.Get(m.ctx, model.RuntimeNodePrefix, clientv3.WithPrefix())
@@ -174,8 +179,12 @@ func (m *Mjobs) watchRuntimeNode() {
 	}
 }
 
+func (m *Mjson) Failover() {
+
+}
+
 // 分配任务的逻辑，使用分布式锁
-func (m *Mjobs) assign(oneTask chan kv) {
+func (m *Mjobs) assign(oneTask chan kv, mutexName string) {
 
 	s, _ := concurrency.NewSession(defautlClient)
 	defer s.Close()
@@ -184,7 +193,7 @@ func (m *Mjobs) assign(oneTask chan kv) {
 	defer cancel()
 
 	// 创建分布式锁
-	l := concurrency.NewMutex(s, model.AssignTaskMutex)
+	l := concurrency.NewMutex(s, mutexName)
 	all := make([]string, 0, len(oneTask))
 
 	l.Lock(ctx)
@@ -211,6 +220,7 @@ func (m *Mjobs) assign(oneTask chan kv) {
 			continue
 		}
 
+		// 过滤正在运行中的任务
 		val := string(rsp.Kvs[0].Value)
 		if val == model.Running || val == model.Stop {
 			continue
@@ -245,5 +255,6 @@ func (m *Mjobs) assign(oneTask chan kv) {
 func (m *Mjobs) SubMain() {
 	m.init()
 	go m.watchRuntimeNode()
+	go m.taskLoop()
 	m.watchGlobalTaskState()
 }

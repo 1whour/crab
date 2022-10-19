@@ -10,6 +10,7 @@ type Param struct {
 	//create, stop, rm, update, gate会修改这个字段，传递到runtime
 	Action   string        `yaml:"action" json:"action"`
 	Executer ExecuterParam `json:"executor" yaml:"executor"`
+	ExecTime time.Time     `json:"execTime" yaml:"execTime"`
 }
 
 func (p *Param) IsOneRuntime() bool {

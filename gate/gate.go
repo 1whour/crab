@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -105,12 +104,14 @@ func (r *Gate) registerRuntimeWithKeepalive(runtimeName string, keepalive chan b
 		r.Error().Msgf("registerRuntimeWithKeepalive.NewLease fail:%s\n", err)
 		return err
 	}
+	// 注册runtime绑定的gate
 
 	// 注册自己的节点信息
 	_, err = defautlClient.Put(r.ctx, model.FullRuntimeNodePath(r.NodeName()), r.ServerAddr, clientv3.WithLease(leaseID))
 	for range keepalive {
 		lease.KeepAliveOnce(r.ctx, leaseID)
 	}
+
 	return nil
 }
 
@@ -133,7 +134,7 @@ func (r *Gate) stream(c *gin.Context) {
 		req := model.Whoami{}
 		err := con.ReadJSON(&req)
 		if err != nil {
-			log.Println("read:", err)
+			r.Warn().Msgf("gate.stream.read:%s\n", err)
 			break
 		}
 
@@ -177,7 +178,9 @@ func (r *Gate) createTask(c *gin.Context) {
 		return
 	}
 
+	// 创建数据队列
 	globalTaskName := model.FullGlobalTaskPath(req.Executer.TaskName)
+	// 创建状态队列
 	globalTaskStateName := model.FullGlobalTaskStatePath(req.Executer.TaskName)
 
 	// 先get，如果有值直接返回
@@ -187,6 +190,7 @@ func (r *Gate) createTask(c *gin.Context) {
 		return
 	}
 
+	req.SetCreate() //设置action
 	all, err := json.Marshal(req)
 	if err != nil {
 		r.error(c, 500, "marshal req:%v", err)
@@ -216,17 +220,152 @@ func (r *Gate) createTask(c *gin.Context) {
 
 // 删除etcd里面task信息，也直接下发命令更新runtime里面信息
 func (r *Gate) deleteTask(c *gin.Context) {
+	var req model.Param
+	err := c.ShouldBind(&req)
+	if err != nil {
+		r.error(c, 500, "deleteTask:%v", err)
+		return
+	}
 
+	// 创建数据队列
+	globalTaskName := model.FullGlobalTaskPath(req.Executer.TaskName)
+	// 创建状态队列
+	globalTaskStateName := model.FullGlobalTaskStatePath(req.Executer.TaskName)
+
+	// 先get，如果有值直接返回
+	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
+	if len(rsp.Kvs) == 0 {
+		r.error(c, 500, "Task is empty and cannot be remove:%s", globalTaskName)
+		return
+	}
+
+	req.SetRemove() //设置action为remove
+	all, err := json.Marshal(req)
+	if err != nil {
+		r.error(c, 500, "marshal req:%v", err)
+		return
+	}
+
+	txn := defaultKVC.Txn(r.ctx)
+	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", rsp.Kvs[0].Version)).
+		Then(
+			clientv3.OpPut(globalTaskName, string(all)),
+			clientv3.OpPut(globalTaskStateName, model.CanRun),
+		).Else()
+
+	txnRsp, err := txn.Commit()
+	if err != nil {
+		r.error(c, 500, "事务执行失败err :%v", err)
+		return
+	}
+
+	if !txnRsp.Succeeded {
+		r.error(c, 500, "事务失败")
+		return
+	}
+
+	r.ok(c, "removeTask 执行成功") //返回正确业务码
 }
 
 // 更新etcd里面的task信息，也下发命令更新runtime里面信息
 func (r *Gate) updateTask(c *gin.Context) {
 
+	var req model.Param
+	err := c.ShouldBind(&req)
+	if err != nil {
+		r.error(c, 500, "updateTask:%v", err)
+		return
+	}
+
+	// 创建数据队列
+	globalTaskName := model.FullGlobalTaskPath(req.Executer.TaskName)
+	// 创建状态队列
+	globalTaskStateName := model.FullGlobalTaskStatePath(req.Executer.TaskName)
+
+	// 先get，如果有值直接返回
+	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
+	if len(rsp.Kvs) == 0 {
+		r.error(c, 500, "Task is empty and cannot be updated:%s", globalTaskName)
+		return
+	}
+
+	req.SetUpdate()
+
+	all, err := json.Marshal(req)
+	if err != nil {
+		r.error(c, 500, "marshal req:%v", err)
+		return
+	}
+
+	txn := defaultKVC.Txn(r.ctx)
+	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", rsp.Kvs[0].Version)).
+		Then(
+			clientv3.OpPut(globalTaskName, string(all)),
+			clientv3.OpPut(globalTaskStateName, model.CanRun),
+		).Else()
+
+	txnRsp, err := txn.Commit()
+	if err != nil {
+		r.error(c, 500, "事务执行失败err :%v", err)
+		return
+	}
+
+	if !txnRsp.Succeeded {
+		r.error(c, 500, "事务失败")
+		return
+	}
+
+	r.ok(c, "updateTask 执行成功") //返回正确业务码
 }
 
 // 更新etcd里面的task信息，置为静止，下发命令取消正在执行中的task
 func (r *Gate) stopTask(c *gin.Context) {
 
+	var req model.Param
+	err := c.ShouldBind(&req)
+	if err != nil {
+		r.error(c, 500, "stopTask:%v", err)
+		return
+	}
+
+	// 创建数据队列
+	globalTaskName := model.FullGlobalTaskPath(req.Executer.TaskName)
+	// 创建状态队列
+	globalTaskStateName := model.FullGlobalTaskStatePath(req.Executer.TaskName)
+
+	// 先get，如果有值直接返回
+	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
+	if len(rsp.Kvs) == 0 {
+		r.error(c, 500, "Task is empty and cannot be stop:%s", globalTaskName)
+		return
+	}
+
+	req.SetStop() //设置action为stop
+	all, err := json.Marshal(req)
+	if err != nil {
+		r.error(c, 500, "marshal req:%v", err)
+		return
+	}
+
+	txn := defaultKVC.Txn(r.ctx)
+	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", rsp.Kvs[0].Version)).
+		Then(
+			clientv3.OpPut(globalTaskName, string(all)),
+			clientv3.OpPut(globalTaskStateName, model.CanRun),
+		).Else()
+
+	txnRsp, err := txn.Commit()
+	if err != nil {
+		r.error(c, 500, "事务执行失败err :%v", err)
+		return
+	}
+
+	if !txnRsp.Succeeded {
+		r.error(c, 500, "事务失败")
+		return
+	}
+
+	r.ok(c, "stopTask 执行成功") //返回正确业务码
 }
 
 // 该模块入口函数

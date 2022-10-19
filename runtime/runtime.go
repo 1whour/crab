@@ -220,7 +220,7 @@ func (r *Runtime) createConntion(gateAddr string) error {
 	}
 
 	defer c.Close()
-	err = utils.WriteJsonTimeout(c, model.RuntimeWhoami{Name: r.Name}, r.WriteTimeout)
+	err = utils.WriteJsonTimeout(c, model.Whoami{Name: r.Name}, r.WriteTimeout)
 	if err != nil {
 		return err
 	}
