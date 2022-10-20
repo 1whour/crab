@@ -272,6 +272,10 @@ func (m *Mjobs) assign(oneTask []kv, mutexName string) {
 				continue
 			}
 
+			if len(rsp.Kvs) == 0 {
+				m.Warn().Msgf("get %s value is nil\n", model.FullGlobalTask(taskName))
+				continue
+			}
 			param := model.Param{}
 			err = json.Unmarshal(rsp.Kvs[0].Value, &param)
 			if err != nil {

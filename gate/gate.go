@@ -70,17 +70,22 @@ func (r *Gate) init() (err error) {
 	return nil
 }
 
+func (r *Gate) autoNewAddr() (addr string) {
+
+	if r.AutoFindAddr {
+		r.ServerAddr = utils.GetUnusedAddr()
+		return r.ServerAddr
+	}
+	return
+}
+
 // 从ServerAddr获取，或者自动生成一个port
 func (r *Gate) getAddress() string {
 	if r.ServerAddr != "" {
 		return r.ServerAddr
 	}
 
-	if r.AutoFindAddr {
-		r.ServerAddr = utils.GetUnusedAddr()
-		return r.ServerAddr
-	}
-	return ""
+	return r.autoNewAddr()
 }
 
 // gate的地址
@@ -347,8 +352,10 @@ func (r *Gate) updateTask(c *gin.Context) {
 		return
 	}
 
+	r.Debug().Msgf("get version:%v, ModRevision:%v\n", rsp.Kvs[0].Version, rsp.Kvs[0].ModRevision)
+
 	txn := defaultKVC.Txn(r.ctx)
-	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", rsp.Kvs[0].Version)).
+	txn.If(clientv3.Compare(clientv3.ModRevision(globalTaskName), "=", rsp.Kvs[0].ModRevision)).
 		Then(
 			clientv3.OpPut(globalTaskName, string(all)),
 			clientv3.OpPut(globalTaskStateName, model.CanRun),
@@ -434,5 +441,10 @@ func (r *Gate) SubMain() {
 	g.POST(model.TASK_STOP_URL, r.stopTask)
 
 	r.Debug().Msgf("serverAddr:%s\n", r.ServerAddr)
-	g.Run(r.ServerAddr)
+	for i := 0; i < 3; i++ {
+		if err := g.Run(r.ServerAddr); err != nil {
+			r.autoNewAddr()
+			time.Sleep(time.Millisecond * 400)
+		}
+	}
 }

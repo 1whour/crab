@@ -84,5 +84,5 @@ func takeNameFromPath(fullPath string) string {
 	if pos == -1 {
 		return ""
 	}
-	return fullPath[pos:]
+	return fullPath[pos+1:]
 }
