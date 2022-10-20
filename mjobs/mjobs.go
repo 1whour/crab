@@ -143,6 +143,7 @@ func (m *Mjobs) oneRuntime(taskName string, param *model.Param, runtimeNodes []s
 	// 向本地队列写入任务
 	ltaskPath := model.RuntimeNodeToLocalTask(runtimeNode, taskName)
 	_, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun)
+	defaultKVC.Put(m.ctx, model.FullGlobalTaskState(taskName), model.Running)
 	return err
 }
 
@@ -152,6 +153,7 @@ func (m *Mjobs) broadcast(taskName string, param *model.Param) (err error) {
 		ltaskPath := model.RuntimeNodeToLocalTask(key.(string), taskName)
 		// 向本地队列写入任务
 		_, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun)
+		defaultKVC.Put(m.ctx, model.FullGlobalTaskState(taskName), model.Running)
 
 		return err == nil
 	})
