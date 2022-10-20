@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/slog"
+	"github.com/gnh123/scheduler/utils"
 	"golang.org/x/net/context"
 )
 
@@ -46,7 +47,7 @@ func NewGinExecutor(opts ...Option) (Executor, error) {
 	}
 
 	if c.IP == "" {
-		ips, err := getIpList()
+		ips, err := utils.GetIpList()
 		if err != nil {
 			return nil, err
 		}

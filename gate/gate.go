@@ -31,7 +31,7 @@ type Gate struct {
 	EtcdAddr     []string      `clop:"short;long;greedy" usage:"etcd address" valid:"required"`
 	NamePrefix   string        `clop:"long" usage:"name prfix"`
 	Name         string        `clop:"short;long" usage:"The name of the gate. If it is not filled, the default is uuid"`
-	Level        string        `clop:"short;long" usage:"log level"`
+	Level        string        `clop:"short;long" usage:"log level" default:"error"`
 	LeaseTime    time.Duration `clop:"long" usage:"lease time" default:"4s"`
 	WriteTime    time.Duration `clop:"long" usage:"write timeout" default"4s"`
 
@@ -51,6 +51,7 @@ var (
 
 func (r *Gate) init() (err error) {
 
+	r.getAddress()
 	r.ctx = context.TODO()
 	r.Slog = slog.New(os.Stdout).SetLevel(r.Level)
 	if r.Name == "" {
@@ -69,13 +70,15 @@ func (r *Gate) init() (err error) {
 	return nil
 }
 
+// 从ServerAddr获取，或者自动生成一个port
 func (r *Gate) getAddress() string {
 	if r.ServerAddr != "" {
 		return r.ServerAddr
 	}
 
 	if r.AutoFindAddr {
-		return utils.GetUnusedAddr()
+		r.ServerAddr = utils.GetUnusedAddr()
+		return r.ServerAddr
 	}
 	return ""
 }
@@ -83,9 +86,10 @@ func (r *Gate) getAddress() string {
 // gate的地址
 // model.GateNodePrefix 注册到/scheduler/gate/node/gate_name
 func (r *Gate) registerGateNode() error {
-	addr := r.getAddress()
+	addr := r.ServerAddr
 	if addr == "" {
-		panic("The service startup address is empty, please set -s ip:port")
+		r.Error().Msgf("The service startup address is empty, please set -s ip:port")
+		os.Exit(1)
 	}
 
 	leaseID, err := utils.NewLeaseWithKeepalive(r.ctx, r.Slog, defautlClient, r.LeaseTime)
@@ -94,7 +98,7 @@ func (r *Gate) registerGateNode() error {
 	}
 
 	// 注册自己的节点信息
-	_, err = defautlClient.Put(r.ctx, model.FullGateNode(r.NodeName()), r.ServerAddr, clientv3.WithLease(leaseID))
+	_, err = defautlClient.Put(r.ctx, model.FullGateNode(r.NodeName()), addr, clientv3.WithLease(leaseID))
 	return err
 }
 
@@ -429,5 +433,6 @@ func (r *Gate) SubMain() {
 	g.PUT(model.TASK_UPDATE_URL, r.updateTask)
 	g.POST(model.TASK_STOP_URL, r.stopTask)
 
-	g.Run()
+	r.Debug().Msgf("serverAddr:%s\n", r.ServerAddr)
+	g.Run(r.ServerAddr)
 }

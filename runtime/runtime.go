@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,7 +31,7 @@ var (
 type Runtime struct {
 	EtcdAddr     []string      `clop:"short;long" usage:"etcd address"`
 	GateAddr     []string      `clop:"long" usage:"endpoint address"`
-	Level        string        `clop:"long" usage:"log level" default:"error"`
+	Level        string        `clop:"short;long" usage:"log level" default:"error"`
 	WriteTimeout time.Duration `clop:"short;long" usage:"Timeout when writing messages"`
 	Name         string        `clop:"short;long" usage:"node name"`
 	ctx          context.Context
@@ -50,6 +51,7 @@ func (r *Runtime) init() (err error) {
 		r.Name = uuid.New().String()
 	}
 
+	r.addrs = make(map[string]string)
 	r.ctx = context.TODO()
 	r.Slog = slog.New(os.Stdout).SetLevel(r.Level)
 
@@ -97,16 +99,19 @@ func (r *Runtime) watchGateNode() {
 				r.Lock()
 				r.addrs[string(ev.Kv.Value)] = string(ev.Kv.Key)
 				r.Unlock()
+				r.Debug().Msgf("create gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
 			case ev.IsModify():
 				// 更新addrs里面的状态
 				r.Lock()
 				r.addrs[string(ev.Kv.Value)] = string(ev.Kv.Key)
 				r.Unlock()
+				r.Debug().Msgf("modify gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
 			case ev.Type == clientv3.EventTypeDelete:
 				// 把被删除的gate从当前addrs里面移除
 				r.Lock()
 				delete(r.addrs, string(ev.Kv.Value))
 				r.Unlock()
+				r.Debug().Msgf("delete gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
 			}
 		}
 	}
@@ -212,12 +217,20 @@ func (r *Runtime) readLoop(conn *websocket.Conn) error {
 
 }
 
+func genGateAddr(gateAddr string) string {
+	if strings.HasPrefix(gateAddr, "ws://") || strings.HasPrefix(gateAddr, "wss://") {
+		return gateAddr
+	}
+	return "ws://" + gateAddr
+}
+
 // 创建一个长连接
 func (r *Runtime) createConntion(gateAddr string) error {
 
-	c, _, err := websocket.DefaultDialer.Dial(gateAddr+"/"+model.TASK_STREAM_URL, nil)
+	gateAddr = genGateAddr(gateAddr) + model.TASK_STREAM_URL
+	c, _, err := websocket.DefaultDialer.Dial(gateAddr, nil)
 	if err != nil {
-		r.Error().Msgf("runtime:dial:%s\n", err)
+		r.Error().Msgf("runtime:dial:%s, address:%s\n", err, gateAddr)
 		return err
 	}
 
