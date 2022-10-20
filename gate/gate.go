@@ -32,7 +32,7 @@ type Gate struct {
 	Name         string        `clop:"short;long" usage:"The name of the gate. If it is not filled, the default is uuid"`
 	Level        string        `clop:"short;long" usage:"log level" default:"error"`
 	LeaseTime    time.Duration `clop:"long" usage:"lease time" default:"7s"`
-	WriteTime    time.Duration `clop:"long" usage:"write timeout" default"4s"`
+	WriteTime    time.Duration `clop:"long" usage:"write timeout" default:"4s"`
 
 	leaseID clientv3.LeaseID
 	*slog.Slog
@@ -130,7 +130,7 @@ func (r *Gate) registerRuntimeWithKeepalive(runtimeName string, keepalive chan b
 	// 注册runtime绑定的gate
 
 	// 注册自己的节点信息
-	nodeName := model.FullRuntimeNode(r.NodeName())
+	nodeName := model.FullRuntimeNode(runtimeName)
 	r.Debug().Msgf("gate.register.runtime.node:%s, host:%s\n", nodeName, r.ServerAddr)
 	_, err = defautlClient.Put(r.ctx, nodeName, r.ServerAddr, clientv3.WithLease(leaseID))
 	if err != nil {

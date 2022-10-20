@@ -59,8 +59,8 @@ type kv struct {
 
 func (m *Mjobs) watchGlobalTaskState() {
 
-	readGateNode := defautlClient.Watch(m.ctx, model.GlobalTaskPrefixState, clientv3.WithPrefix())
-	for ersp := range readGateNode {
+	readGlobal := defautlClient.Watch(m.ctx, model.GlobalTaskPrefixState, clientv3.WithPrefix())
+	for ersp := range readGlobal {
 		for _, ev := range ersp.Events {
 			switch {
 			case ev.IsCreate():
