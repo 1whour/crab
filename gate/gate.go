@@ -29,7 +29,6 @@ type Gate struct {
 	ServerAddr   string        `clop:"short;long" usage:"server address"`
 	AutoFindAddr bool          `clop:"short;long" usage:"Automatically find unused ip:port, Only takes effect when ServerAddr is empty"`
 	EtcdAddr     []string      `clop:"short;long;greedy" usage:"etcd address" valid:"required"`
-	NamePrefix   string        `clop:"long" usage:"name prfix"`
 	Name         string        `clop:"short;long" usage:"The name of the gate. If it is not filled, the default is uuid"`
 	Level        string        `clop:"short;long" usage:"log level" default:"error"`
 	LeaseTime    time.Duration `clop:"long" usage:"lease time" default:"7s"`
@@ -41,7 +40,7 @@ type Gate struct {
 }
 
 func (g *Gate) NodeName() string {
-	return fmt.Sprintf("%s-%s", g.NamePrefix, g.Name)
+	return g.Name
 }
 
 var (
@@ -54,10 +53,10 @@ func (r *Gate) init() (err error) {
 
 	r.getAddress()
 	r.ctx = context.TODO()
-	r.Slog = slog.New(os.Stdout).SetLevel(r.Level)
 	if r.Name == "" {
 		r.Name = uuid.New().String()
 	}
+	r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("gate", r.Name)
 
 	if r.LeaseTime < model.RuntimeKeepalive {
 		r.LeaseTime = model.RuntimeKeepalive + time.Second
@@ -147,8 +146,10 @@ func (r *Gate) registerRuntimeWithKeepalive(runtimeName string, keepalive chan b
 
 func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 
-	localTask := defautlClient.Watch(r.ctx, model.WatchLocalRuntimePrefix(runtimeName), clientv3.WithPrefix())
+	localPath := model.WatchLocalRuntimePrefix(runtimeName)
+	localTask := defautlClient.Watch(r.ctx, localPath, clientv3.WithPrefix())
 
+	r.Debug().Msgf(">>> watch local:%s\n", localPath)
 	for ersp := range localTask {
 		for _, ev := range ersp.Events {
 
@@ -170,6 +171,7 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 				continue
 			}
 
+			r.Debug().Msgf("watchLocalRunq create(%t) modify(%t) \n", ev.IsCreate(), ev.IsModify())
 			switch {
 			case ev.IsCreate(), ev.IsModify():
 				if err := utils.WriteMessageTimeout(conn, value, r.WriteTime); err != nil {
@@ -447,6 +449,7 @@ func (r *Gate) SubMain() {
 
 	go r.registerGateNode()
 
+	gin.SetMode(gin.ReleaseMode)
 	g := gin.New()
 	g.GET(model.TASK_STREAM_URL, r.stream) //流式接口，主动推送任务至runtime
 	g.POST(model.TASK_CREATE_URL, r.createTask)
