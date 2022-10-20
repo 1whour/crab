@@ -53,7 +53,7 @@ func (r *Runtime) init() (err error) {
 
 	r.addrs = make(map[string]string)
 	r.ctx = context.TODO()
-	r.Slog = slog.New(os.Stdout).SetLevel(r.Level)
+	r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("runtime", r.Name)
 
 	if len(r.EtcdAddr) == 0 && len(r.GateAddr) == 0 {
 		r.Error().Msg("etcd address is nil or endpoint is nil")
@@ -90,13 +90,16 @@ func (r *Runtime) watchGateNode() {
 		return
 	}
 
-	rsp, err := defautlClient.Get(r.ctx, model.GateNodePrefix)
+	rsp, err := defautlClient.Get(r.ctx, model.GateNodePrefix, clientv3.WithPrefix())
 	if err != nil {
 		r.Warn().Msgf("runtime.get gate node %s\n", err)
 	}
 
+	r.Debug().Msgf("runtime.watchGateNode:%v\n", rsp)
 	for _, ev := range rsp.Kvs {
+		r.Lock()
 		r.addrs[string(ev.Value)] = string(ev.Key)
+		r.Unlock()
 	}
 
 	readGateNode := defautlClient.Watch(r.ctx, model.GateNodePrefix, clientv3.WithPrefix())
@@ -124,12 +127,14 @@ func (r *Runtime) watchGateNode() {
 			}
 		}
 	}
+
+	panic("watchGateNode end")
 }
 
 func (r *Runtime) writeWhoami(conn *websocket.Conn) (err error) {
 	r.muWc.Lock()
 	err = utils.WriteJsonTimeout(conn, model.Whoami{Name: r.Name}, r.WriteTimeout)
-	r.muWc.Lock()
+	r.muWc.Unlock()
 	return err
 }
 
@@ -137,7 +142,7 @@ func (r *Runtime) writeWhoami(conn *websocket.Conn) (err error) {
 func (r *Runtime) writeError(conn *websocket.Conn, to time.Duration, code int, msg string) (err error) {
 	r.muWc.Lock()
 	err = utils.WriteJsonTimeout(conn, model.RuntimeResp{Code: code, Message: msg}, to)
-	r.muWc.Lock()
+	r.muWc.Unlock()
 	return err
 }
 
@@ -198,6 +203,7 @@ func (r *Runtime) readLoop(conn *websocket.Conn) error {
 
 	var param model.Param
 
+	r.Debug().Msgf("call readLoop\n")
 	go func() {
 		// 对conn执行心跳检查，conn可能长时间空闲，为是检查conn是否健康，加上心跳
 		for {
@@ -218,6 +224,7 @@ func (r *Runtime) readLoop(conn *websocket.Conn) error {
 
 		go func() {
 			if err := r.runCrud(conn, &param); err != nil {
+				r.Error().Msgf("runtime.runCrud:%s\n", err)
 				//r.writeError(conn, r.WriteTimeout, 1, err.Error())
 				return
 			}
@@ -249,7 +256,6 @@ func (r *Runtime) createConntion(gateAddr string) error {
 		return err
 	}
 
-	go func() {}()
 	return r.readLoop(c)
 }
 
@@ -292,9 +298,9 @@ func (r *Runtime) createConnRand() {
 		for i := 0; i < 2; i++ {
 
 			if err := r.createConntion(addr); err != nil {
-				t.sleep()
 				// 如果握手或者上传第一个包失败，sleep 下，再重连一次
 				r.Error().Msgf("createConnection fail:%v\n", err)
+				t.sleep()
 			} else {
 				t.reset()
 			}

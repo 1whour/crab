@@ -32,9 +32,10 @@ type Gate struct {
 	NamePrefix   string        `clop:"long" usage:"name prfix"`
 	Name         string        `clop:"short;long" usage:"The name of the gate. If it is not filled, the default is uuid"`
 	Level        string        `clop:"short;long" usage:"log level" default:"error"`
-	LeaseTime    time.Duration `clop:"long" usage:"lease time" default:"4s"`
+	LeaseTime    time.Duration `clop:"long" usage:"lease time" default:"7s"`
 	WriteTime    time.Duration `clop:"long" usage:"write timeout" default"4s"`
 
+	leaseID clientv3.LeaseID
 	*slog.Slog
 	ctx context.Context
 }
@@ -79,6 +80,16 @@ func (r *Gate) autoNewAddr() (addr string) {
 	return
 }
 
+func (r *Gate) autoNewAddrAndRegister() {
+	r.autoNewAddr()
+	_, err := defautlClient.Revoke(r.ctx, r.leaseID)
+	if err != nil {
+		r.Error().Msgf("revoke leaseID:%d %v\n", r.leaseID, err)
+		return
+	}
+	go r.registerGateNode()
+}
+
 // 从ServerAddr获取，或者自动生成一个port
 func (r *Gate) getAddress() string {
 	if r.ServerAddr != "" {
@@ -102,8 +113,11 @@ func (r *Gate) registerGateNode() error {
 		return err
 	}
 
+	r.leaseID = leaseID
 	// 注册自己的节点信息
-	_, err = defautlClient.Put(r.ctx, model.FullGateNode(r.NodeName()), addr, clientv3.WithLease(leaseID))
+	nodeName := model.FullGateNode(r.NodeName())
+	r.Debug().Msgf("gate.register.node:%s, host:%s\n", nodeName, addr)
+	_, err = defautlClient.Put(r.ctx, nodeName, addr, clientv3.WithLease(leaseID))
 	return err
 }
 
@@ -117,12 +131,18 @@ func (r *Gate) registerRuntimeWithKeepalive(runtimeName string, keepalive chan b
 	// 注册runtime绑定的gate
 
 	// 注册自己的节点信息
-	_, err = defautlClient.Put(r.ctx, model.FullRuntimeNode(r.NodeName()), r.ServerAddr, clientv3.WithLease(leaseID))
+	nodeName := model.FullRuntimeNode(r.NodeName())
+	r.Debug().Msgf("gate.register.runtime.node:%s, host:%s\n", nodeName, r.ServerAddr)
+	_, err = defautlClient.Put(r.ctx, nodeName, r.ServerAddr, clientv3.WithLease(leaseID))
+	if err != nil {
+		r.Error().Msgf("gate.register.runtime.node %s\n", err)
+	}
+
 	for range keepalive {
 		lease.KeepAliveOnce(r.ctx, leaseID)
 	}
 
-	return nil
+	return err
 }
 
 func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
@@ -193,21 +213,15 @@ func (r *Gate) stream(c *gin.Context) {
 		}
 
 		if first {
-			go r.registerRuntimeWithKeepalive(req.Name, keepalive)
+			go func() {
+				r.registerRuntimeWithKeepalive(req.Name, keepalive)
+			}()
 			go r.watchLocalRunq(req.Name, con)
 			first = false
 		} else {
 			keepalive <- true
 		}
 
-		// TODO
-		/*
-			err = con.WriteJSON(mt, map[])
-			if err != nil {
-				log.Println("write:", err)
-				break
-			}
-		*/
 	}
 }
 
@@ -443,7 +457,7 @@ func (r *Gate) SubMain() {
 	r.Debug().Msgf("gate:serverAddr:%s\n", r.ServerAddr)
 	for i := 0; i < 3; i++ {
 		if err := g.Run(r.ServerAddr); err != nil {
-			r.autoNewAddr()
+			r.autoNewAddrAndRegister()
 			r.Debug().Msgf("gate:serverAddr:%s\n", r.ServerAddr)
 			time.Sleep(time.Millisecond * 500)
 		}

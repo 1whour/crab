@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -107,14 +108,17 @@ func (m *Mjobs) taskLoop() {
 	proc:
 		if run {
 			if len(oneTask) > 0 {
-				go func() {
+				go func(oneTask []kv) {
+
 					defer func() {
 						if err := recover(); err != nil {
-							m.Error().Msgf("%v\n", err)
+							m.Error().Msgf("%s\n", err, debug.Stack())
 						}
 					}()
 					m.assign(oneTask, model.AssignTaskMutex)
-				}()
+
+				}(oneTask)
+
 				oneTask = createOneTask()
 			}
 			run = false
@@ -176,8 +180,9 @@ func (m *Mjobs) watchRuntimeNode() {
 				// 在当前内存中
 			case ev.IsModify():
 				// 这里不应该发生
-				m.Warn().Msgf("Is this key() modified??? Not expected\n", string(ev.Kv.Key))
+				m.Warn().Msgf("Is this key(%s) modified??? Not expected, value:%s\n", string(ev.Kv.Key), string(ev.Kv.Value))
 			case ev.Type == clientv3.EventTypeDelete:
+				m.Debug().Msgf("Is this key(%s) delete, value:%s\n", string(ev.Kv.Key), string(ev.Kv.Value))
 				// 被删除
 				go func() {
 					if err := m.failover(string(ev.Kv.Key)); err != nil {
@@ -226,7 +231,7 @@ func (m *Mjobs) failover(fullRuntime string) error {
 
 // 分配任务的逻辑，使用分布式锁
 func (m *Mjobs) assign(oneTask []kv, mutexName string) {
-	m.Debug().Msgf("call assign\n")
+	m.Debug().Msgf("call assign, oneTask.size:%d\n", len(oneTask))
 	s, _ := concurrency.NewSession(defautlClient)
 	defer s.Close()
 
@@ -273,6 +278,7 @@ func (m *Mjobs) assign(oneTask []kv, mutexName string) {
 
 		for _, taskName := range all {
 
+			m.Debug().Msgf("assign, taskName %s\n", taskName)
 			rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTask(taskName))
 			if err != nil {
 				m.Error().Msgf("get global task path fail:%s\n", err)
