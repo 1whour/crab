@@ -6,10 +6,10 @@ import (
 )
 
 // 获取没有绑定服务的地址(ip:port)
-func GetUnusedPort() string {
+func GetUnusedPort(ip string) string {
 	startPort := 1024 //1000以下的端口很多时候需要root权限才能使用
 	for port := startPort; port < 65535; port++ {
-		addr := fmt.Sprintf("0.0.0.0:%d", port)
+		addr := fmt.Sprintf("%s:%d", ip, port)
 		l, err := net.Listen("tcp", addr)
 		if err != nil {
 			continue
@@ -51,5 +51,5 @@ func GetUnusedAddr() string {
 		return ""
 	}
 
-	return ip + ":" + GetUnusedPort()
+	return ip + ":" + GetUnusedPort(ip)
 }
