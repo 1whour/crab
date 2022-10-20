@@ -17,7 +17,7 @@ import (
 
 // mjobs管理task
 type Mjobs struct {
-	EtcdAddr  []string      `clop:"short;long;greedy" usage:"etcd address"`
+	EtcdAddr  []string      `clop:"short;long;greedy" usage:"etcd address" valid:"required"`
 	NodeName  string        `clop:"short;long" usage:"node name"`
 	Level     string        `clop:"short;long" usage:"log level"`
 	LeaseTime time.Duration `clop:"long" usage:"lease time" default:"10s"`
@@ -287,7 +287,11 @@ func (m *Mjobs) assign(oneTask []kv, mutexName string) {
 
 // mjobs子命令的的入口函数
 func (m *Mjobs) SubMain() {
-	m.init()
+	if err := m.init(); err != nil {
+		m.Error().Msgf("init:%s\n", err)
+		return
+	}
+
 	go m.watchRuntimeNode()
 	go m.taskLoop()
 	m.watchGlobalTaskState()
