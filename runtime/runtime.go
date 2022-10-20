@@ -32,7 +32,7 @@ type Runtime struct {
 	EtcdAddr     []string      `clop:"short;long" usage:"etcd address"`
 	GateAddr     []string      `clop:"long" usage:"endpoint address"`
 	Level        string        `clop:"short;long" usage:"log level" default:"error"`
-	WriteTimeout time.Duration `clop:"short;long" usage:"Timeout when writing messages"`
+	WriteTimeout time.Duration `clop:"short;long" usage:"Timeout when writing messages" default:"3s"`
 	Name         string        `clop:"short;long" usage:"node name"`
 	ctx          context.Context
 	*slog.Slog
