@@ -254,10 +254,12 @@ func (m *Mjobs) assign(oneTask []kv, mutexName string) {
 			continue
 		}
 
-		// 过滤正在运行中的任务
-		val := string(rsp.Kvs[0].Value)
-		if val == model.Running || val == model.Stop {
-			continue
+		if len(rsp.Kvs) > 0 {
+			// 过滤正在运行中的任务
+			val := string(rsp.Kvs[0].Value)
+			if val == model.Running || val == model.Stop {
+				continue
+			}
 		}
 		// 可以直接执行的taskName
 		all = append(all, taskName)

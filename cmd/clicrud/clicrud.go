@@ -2,9 +2,11 @@ package clicrud
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
+	"github.com/gnh123/scheduler/model"
 	"github.com/guonaihong/gout"
 )
 
@@ -12,6 +14,50 @@ type CrudOpt struct {
 	FileName string   `clop:"short;long" usage:"config filename" valid:"required"`
 	GateAddr []string `clop:"short;long" usage:"gate address" valid:"required"`
 	Debug    bool     `clop:"short;long" usage:"debug mode"`
+}
+
+type Rm struct {
+	CrudOpt
+}
+
+// 删除子命令入口
+func (r *Rm) SubMain() {
+	r.Crud(r.GateAddr[0]+model.TASK_DELETE_URL, http.MethodDelete)
+}
+
+type Start struct {
+	CrudOpt
+}
+
+// start子命令入口函数
+func (r *Start) SubMain() {
+
+	if len(r.GateAddr) == 0 {
+		return
+	}
+
+	err := r.Crud(r.GateAddr[0]+model.TASK_CREATE_URL, http.MethodPost)
+	if err != nil {
+		fmt.Printf("start: %s\n", err)
+	}
+}
+
+type Stop struct {
+	CrudOpt
+}
+
+// stop子命令入口
+func (s *Stop) SubMain() {
+	s.Crud(s.GateAddr[0]+model.TASK_STOP_URL, http.MethodPost)
+}
+
+type Update struct {
+	CrudOpt
+}
+
+// 更新子命令入口
+func (u *Update) SubMain() {
+	u.Crud(u.GateAddr[0]+model.TASK_UPDATE_URL, http.MethodPut)
 }
 
 // fileName是需要打开的文件名
