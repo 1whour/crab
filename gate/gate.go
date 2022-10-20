@@ -440,11 +440,12 @@ func (r *Gate) SubMain() {
 	g.PUT(model.TASK_UPDATE_URL, r.updateTask)
 	g.POST(model.TASK_STOP_URL, r.stopTask)
 
-	r.Debug().Msgf("serverAddr:%s\n", r.ServerAddr)
+	r.Debug().Msgf("gate:serverAddr:%s\n", r.ServerAddr)
 	for i := 0; i < 3; i++ {
 		if err := g.Run(r.ServerAddr); err != nil {
 			r.autoNewAddr()
-			time.Sleep(time.Millisecond * 400)
+			r.Debug().Msgf("gate:serverAddr:%s\n", r.ServerAddr)
+			time.Sleep(time.Millisecond * 500)
 		}
 	}
 }

@@ -107,7 +107,14 @@ func (m *Mjobs) taskLoop() {
 	proc:
 		if run {
 			if len(oneTask) > 0 {
-				go m.assign(oneTask, model.AssignTaskMutex)
+				go func() {
+					defer func() {
+						if err := recover(); err != nil {
+							m.Error().Msgf("%v\n", err)
+						}
+					}()
+					m.assign(oneTask, model.AssignTaskMutex)
+				}()
 				oneTask = createOneTask()
 			}
 			run = false
@@ -219,7 +226,7 @@ func (m *Mjobs) failover(fullRuntime string) error {
 
 // 分配任务的逻辑，使用分布式锁
 func (m *Mjobs) assign(oneTask []kv, mutexName string) {
-
+	m.Debug().Msgf("call assign\n")
 	s, _ := concurrency.NewSession(defautlClient)
 	defer s.Close()
 

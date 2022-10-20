@@ -90,6 +90,15 @@ func (r *Runtime) watchGateNode() {
 		return
 	}
 
+	rsp, err := defautlClient.Get(r.ctx, model.GateNodePrefix)
+	if err != nil {
+		r.Warn().Msgf("runtime.get gate node %s\n", err)
+	}
+
+	for _, ev := range rsp.Kvs {
+		r.addrs[string(ev.Value)] = string(ev.Key)
+	}
+
 	readGateNode := defautlClient.Watch(r.ctx, model.GateNodePrefix, clientv3.WithPrefix())
 	for ersp := range readGateNode {
 		for _, ev := range ersp.Events {
