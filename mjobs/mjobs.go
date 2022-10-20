@@ -17,7 +17,7 @@ import (
 
 // mjobs管理task
 type Mjobs struct {
-	EtcdAddr  []string      `clop:"short;long" usage:"etcd address"`
+	EtcdAddr  []string      `clop:"short;long;greedy" usage:"etcd address"`
 	NodeName  string        `clop:"short;long" usage:"node name"`
 	Level     string        `clop:"short;long" usage:"log level"`
 	LeaseTime time.Duration `clop:"long" usage:"lease time" default:"10s"`

@@ -28,7 +28,7 @@ var upgrader = websocket.Upgrader{}
 type Gate struct {
 	ServerAddr   string        `clop:"short;long" usage:"server address"`
 	AutoFindAddr bool          `clop:"short;long" usage:"Automatically find unused ip:port, Only takes effect when ServerAddr is empty"`
-	EtcdAddr     []string      `clop:"short;long" usage:"etcd address" valid:"required"`
+	EtcdAddr     []string      `clop:"short;long;greedy" usage:"etcd address" valid:"required"`
 	NamePrefix   string        `clop:"long" usage:"name prfix"`
 	Name         string        `clop:"short;long" usage:"The name of the gate. If it is not filled, the default is uuid"`
 	Level        string        `clop:"short;long" usage:"log level"`

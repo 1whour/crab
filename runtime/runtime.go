@@ -50,10 +50,12 @@ func (r *Runtime) init() (err error) {
 		r.Name = uuid.New().String()
 	}
 
+	r.ctx = context.TODO()
 	r.Slog = slog.New(os.Stdout).SetLevel(r.Level)
 
 	if len(r.EtcdAddr) == 0 && len(r.GateAddr) == 0 {
-		panic("etcd address is nil or endpoint is nil")
+		r.Error().Msg("etcd address is nil or endpoint is nil")
+		os.Exit(1)
 	}
 	// 设置日志
 	if len(r.EtcdAddr) > 0 {
@@ -229,13 +231,27 @@ func (r *Runtime) createConntion(gateAddr string) error {
 	return r.readLoop(c)
 }
 
+type interval time.Duration
+
+func (i *interval) reset() {
+	*i = interval(intervalTime)
+}
+
+func (i *interval) sleep() {
+
+	time.Sleep(time.Duration(*i))
+	*i *= 2
+	*i = interval(cmp.Min(time.Duration(*i), maxIntervalTime))
+}
+
 // 初始化时创建 只创建一个长连接
 // 故意这么设计
 // 为了简化gate广播发送的逻辑, 一个runtime只会连一个gate，并且只有一个长连接，
 // 这样不需要考虑去重，引入额外中间件，简化设计
 func (r *Runtime) createConnRand() {
 
-	interval := intervalTime
+	var t interval
+	t.reset()
 
 	for {
 
@@ -243,18 +259,22 @@ func (r *Runtime) createConnRand() {
 		addrs := mapex.Keys(r.addrs)
 		r.Unlock()
 
+		if len(addrs) == 0 {
+			r.Info().Msgf("no gate address available\n")
+			t.sleep()
+			continue
+		}
+
 		addr := utils.SliceRandOne(addrs)
 
 		for i := 0; i < 2; i++ {
 
 			if err := r.createConntion(addr); err != nil {
+				t.sleep()
 				// 如果握手或者上传第一个包失败，sleep 下，再重连一次
-				time.Sleep(interval)
-				interval *= 2
-				interval = cmp.Min(interval, maxIntervalTime)
 				r.Error().Msgf("createConnection fail:%v\n", err)
 			} else {
-				interval = intervalTime
+				t.reset()
 			}
 		}
 	}
