@@ -1,0 +1,16 @@
+apiVersion: v0.0.1 #api版本号
+kind: oneRuntime #只在一个runtime上运行
+executer:
+  taskName: first-task
+  http:
+    method: post
+    scheme: http
+    host: 127.0.0.1
+    port: 8080
+    headers:
+    - name: Bid
+      value: xxxx
+    - name: token
+      value: vvvv
+    body: |
+      {"a":"b"}

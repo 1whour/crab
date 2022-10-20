@@ -9,7 +9,7 @@ type Param struct {
 	Kind string `yaml:"kind" json:"kind" binding:"required"`
 	//create, stop, rm, update, gate会修改这个字段，传递到runtime
 	Action   string        `yaml:"action" json:"action"`
-	Executer ExecuterParam `json:"executor" yaml:"executor"`
+	Executer ExecuterParam `json:"executer" yaml:"executer"`
 	ExecTime time.Time     `json:"execTime" yaml:"execTime"`
 }
 
@@ -54,10 +54,10 @@ func (p *Param) IsUpdate() bool {
 }
 
 type ExecuterParam struct {
-	TaskName string `yaml:"task_name" json:"task_name" binding:"required"` //自定义执行器，需要给到TaskName
-	HTTP     *HTTP  `yaml:"http" json:"http"`                              //http包
-	Shell    *Shell `yaml:"shell" json:"shell"`                            //shell包
-	Grpc     *Grpc  `yaml:"grpc" json:"grpc"`                              //grpc
+	TaskName string `yaml:"taskName" json:"taskName" binding:"required"` //自定义执行器，需要给到TaskName
+	HTTP     *HTTP  `yaml:"http" json:"http"`                            //http包
+	Shell    *Shell `yaml:"shell" json:"shell"`                          //shell包
+	Grpc     *Grpc  `yaml:"grpc" json:"grpc"`                            //grpc
 }
 
 // 判断是通用执行器

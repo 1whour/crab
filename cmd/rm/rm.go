@@ -13,5 +13,5 @@ type Rm struct {
 
 // 删除子命令入口
 func (r *Rm) SubMain() {
-	clicrud.Crud(r.FileName, r.GateAddr[0]+model.TASK_DELETE_URL, http.MethodDelete)
+	r.Crud(r.GateAddr[0]+model.TASK_DELETE_URL, http.MethodDelete)
 }

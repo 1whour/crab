@@ -13,5 +13,5 @@ type Stop struct {
 
 // stop子命令入口
 func (s *Stop) SubMain() {
-	clicrud.Crud(s.FileName, s.GateAddr[0]+model.TASK_STOP_URL, http.MethodPost)
+	s.Crud(s.GateAddr[0]+model.TASK_STOP_URL, http.MethodPost)
 }

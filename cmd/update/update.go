@@ -13,5 +13,5 @@ type Update struct {
 
 // 更新子命令入口
 func (u *Update) SubMain() {
-	clicrud.Crud(u.FileName, u.GateAddr[0]+model.TASK_UPDATE_URL, http.MethodPut)
+	u.Crud(u.GateAddr[0]+model.TASK_UPDATE_URL, http.MethodPut)
 }

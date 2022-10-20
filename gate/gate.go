@@ -224,7 +224,7 @@ func (r *Gate) createTask(c *gin.Context) {
 	var req model.Param
 	err := c.ShouldBind(&req)
 	if err != nil {
-		r.error(c, 500, "createTask:%v", err)
+		r.error(c, 500, "createTask:%v, type:%s", err, c.ContentType())
 		return
 	}
 
