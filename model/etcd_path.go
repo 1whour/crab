@@ -45,6 +45,12 @@ func fullLocalRuntimeTask(runtimeName, taskName string) string {
 }
 
 // runtimeNode转成本地队列
+func RuntimeNodeToLocalTaskPrefix(fullRuntimeName string) string {
+	runtimeName := takeNameFromPath(fullRuntimeName)
+	return WatchLocalRuntimePrefix(runtimeName)
+}
+
+// runtimeNode转成本地队列
 func RuntimeNodeToLocalTask(fullRuntimeName, taskName string) string {
 	runtimeName := takeNameFromPath(fullRuntimeName)
 	return fullLocalRuntimeTask(runtimeName, taskName)
@@ -72,20 +78,11 @@ func TaskNameFromState(fullPath string) string {
 	return takeNameFromPath(fullPath)
 }
 
+// 提取taskName
 func takeNameFromPath(fullPath string) string {
 	pos := strings.LastIndex(fullPath, "/")
 	if pos == -1 {
 		return ""
 	}
 	return fullPath[pos:]
-}
-
-// gate node的信息
-func FullGateNode(name string) string {
-	return fmt.Sprintf("%s/%s", GateNodePrefix, name)
-}
-
-// 生成runtime node的信息
-func FullRuntimeNode(runtimeName string) string {
-	return fmt.Sprintf("%s/%s", RuntimeNodePrefix, runtimeName)
 }

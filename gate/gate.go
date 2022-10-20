@@ -123,9 +123,9 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 	for ersp := range localTask {
 		for _, ev := range ersp.Events {
 
-			key := string(ev.Kv.Key)
-			taskName := model.TaskNameFromState(key)
-			globalKey := model.FullLocalToGlobalTask(key)
+			localKey := string(ev.Kv.Key)
+			taskName := model.TaskNameFromState(localKey)
+			globalKey := model.FullLocalToGlobalTask(localKey)
 			rsp, err := defaultKVC.Get(r.ctx, globalKey)
 			if err != nil {
 				r.Warn().Msgf("gate.watchLocalRunq: get param %s\n", err)
@@ -150,8 +150,8 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 
 				if param.IsRemove() {
 					defaultKVC.Delete(r.ctx, globalKey)
-					defaultKVC.Delete(r.ctx, string(key))
-					defaultKVC.Delete(r.ctx, model.FullGlobalTaskState(taskName))
+					defaultKVC.Delete(r.ctx, localKey)
+					defaultKVC.Delete(r.ctx, model.FullGlobalTaskState(taskName)) //删除本地队列
 				}
 			case ev.Type == clientv3.EventTypeDelete:
 				r.Debug().Msgf("delete global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
@@ -273,12 +273,12 @@ func (r *Gate) deleteTask(c *gin.Context) {
 		return
 	}
 
-	// 创建数据队列
+	// 生成数据队列的名字
 	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
-	// 创建状态队列
+	// 生成状态队列的名字
 	globalTaskStateName := model.FullGlobalTaskState(req.Executer.TaskName)
 
-	// 先get，如果有值直接返回
+	// 先get，如果无值直接返回
 	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
 	if len(rsp.Kvs) == 0 {
 		r.error(c, 500, "Task is empty and cannot be remove:%s", globalTaskName)

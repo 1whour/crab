@@ -77,39 +77,40 @@ func (m *Mjobs) watchGlobalTaskState() {
 	}
 }
 
+var createOneTask = func() []kv {
+	return make([]kv, 0, 100)
+}
+
 // 从watch里面读取创建任务，当任务满足一定条件，比如满足一定条数，满足一定时间
 // 先获取分布式锁，然后把任务打散到对应的gate节点，该节点负责推送到runtime节点
 func (m *Mjobs) taskLoop() {
 
 	tk := time.NewTicker(time.Second)
 
-	createOneTask := func() chan kv {
-		return make(chan kv, 100)
-	}
-
 	oneTask := createOneTask()
+	run := false
 	for {
 
 		select {
 		case t := <-m.taskChan:
-			select {
-			case oneTask <- t:
-			default:
-				//执行到default，说明chan已经被灌满
+			oneTask = append(oneTask, t)
+			if len(oneTask) == cap(oneTask) {
+				run = true
 				goto proc
 			}
 		case <-tk.C:
+			run = true
 			//或者超时
 			goto proc
 		}
 
 	proc:
-		if false {
+		if run {
 			if len(oneTask) > 0 {
-				close(oneTask)
 				go m.assign(oneTask, model.AssignTaskMutex)
 				oneTask = createOneTask()
 			}
+			run = false
 		}
 	}
 }
@@ -167,11 +168,15 @@ func (m *Mjobs) watchRuntimeNode() {
 				m.runtimeNode.Store(string(ev.Kv.Key), string(ev.Kv.Value))
 				// 在当前内存中
 			case ev.IsModify():
-				//m.runtimeNode.Store(string(ev.Kv.Key), string(ev.Kv.Value))
-				m.Debug().Msgf("Is this key() modified??? Not expected\n", string(ev.Kv.Key))
+				// 这里不应该发生
+				m.Warn().Msgf("Is this key() modified??? Not expected\n", string(ev.Kv.Key))
 			case ev.Type == clientv3.EventTypeDelete:
 				// 被删除
-				// TODO 重新分配队列
+				go func() {
+					if err := m.failover(string(ev.Kv.Key)); err != nil {
+						m.Warn().Msgf("Is this key() modified??? Not expected\n", string(ev.Kv.Key))
+					}
+				}()
 				m.runtimeNode.Delete(string(ev.Kv.Key))
 			}
 		}
@@ -180,14 +185,40 @@ func (m *Mjobs) watchRuntimeNode() {
 
 // 故障转移
 // 监听runtime node的存活，如果死掉，把任务重新分发下
-// 1.如果是故障转移的广播任务, 按道理，只应该在没有的机器上创建这个任务
+// 1.如果是故障转移的广播任务, 按道理，只应该在没有的机器上创建这个任务, TODO优化
 // 2.如果是单runtime任务，任选一个runtime执行
-func (m *Mjobs) failover() {
 
+func (m *Mjobs) failover(fullRuntime string) error {
+	localPrefix := model.RuntimeNodeToLocalTaskPrefix(fullRuntime)
+	rsp, err := defaultKVC.Get(m.ctx, localPrefix, clientv3.WithPrefix())
+	if err != nil {
+		return err
+	}
+
+	oneTask := createOneTask()
+	for _, keyval := range rsp.Kvs {
+		oneTask = append(oneTask, kv{key: string(keyval.Key), val: string(keyval.Value)})
+		m.assign(oneTask, model.AssignTaskMutex)
+
+		for _, v := range oneTask {
+			_, err := defaultKVC.Delete(m.ctx, v.key)
+			if err != nil {
+				m.Warn().Msgf("failover.delete fail:%s\n", err)
+				continue
+			}
+
+		}
+		oneTask = createOneTask()
+	}
+
+	if len(oneTask) > 0 {
+		m.assign(oneTask, model.AssignTaskMutex)
+	}
+	return nil
 }
 
 // 分配任务的逻辑，使用分布式锁
-func (m *Mjobs) assign(oneTask chan kv, mutexName string) {
+func (m *Mjobs) assign(oneTask []kv, mutexName string) {
 
 	s, _ := concurrency.NewSession(defautlClient)
 	defer s.Close()
@@ -208,7 +239,7 @@ func (m *Mjobs) assign(oneTask chan kv, mutexName string) {
 		return true
 	})
 
-	for kv := range oneTask {
+	for _, kv := range oneTask {
 		// 从状态信息里面获取tastName
 		taskName := model.TaskNameFromState(kv.key)
 		if taskName == "" {
