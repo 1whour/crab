@@ -182,11 +182,13 @@ func (m *Mjobs) oneRuntime(taskName string, param *model.Param, runtimeNodes []s
 			return err
 		}
 
+		m.Debug().Msgf("state:%v\n", state)
 		runtimeNode = state.RuntimeNode
 	}
 
 	if len(runtimeNode) == 0 {
-		m.Warn().Msgf("The runtimeNode is expected to be valuable")
+		m.Warn().Msgf("The runtimeNode is expected to be valuable\n")
+		return
 	}
 
 	// 生成本地队列的名字
@@ -250,7 +252,9 @@ func (m *Mjobs) watchRuntimeNode() {
 	rsp, err := defaultKVC.Get(m.ctx, model.RuntimeNodePrefix, clientv3.WithPrefix())
 	if err == nil {
 		for _, e := range rsp.Kvs {
-			m.runtimeNode.Store(string(e.Key), string(e.Value))
+			key := string(e.Key)
+			val := string(e.Value)
+			m.runtimeNode.Store(key, val)
 		}
 	}
 
@@ -259,15 +263,15 @@ func (m *Mjobs) watchRuntimeNode() {
 	runtimeNode := defautlClient.Watch(m.ctx, model.RuntimeNodePrefix, clientv3.WithPrefix(), clientv3.WithRev(rev))
 	for ersp := range runtimeNode {
 		for _, ev := range ersp.Events {
+			m.Debug().Msgf("mjobs.runtimeNodes key(%s) value(%s) create(%t), update(%t), delete(%t)\n",
+				string(ev.Kv.Key), string(ev.Kv.Value), ev.IsCreate(), ev.IsModify(), ev.Type == clientv3.EventTypeDelete)
 			switch {
 			case ev.IsCreate():
 				m.runtimeNode.Store(string(ev.Kv.Key), string(ev.Kv.Value))
 				// 在当前内存中
 			case ev.IsModify():
 				// 这里不应该发生
-				m.Warn().Msgf("Is this key(%s) modified??? Not expected, value:%s\n", string(ev.Kv.Key), string(ev.Kv.Value))
 			case ev.Type == clientv3.EventTypeDelete:
-				m.Debug().Msgf("Is this key(%s) delete, value:%s\n", string(ev.Kv.Key), string(ev.Kv.Value))
 				// 被删除
 				go func() {
 					if err := m.failover(string(ev.Kv.Key)); err != nil {
@@ -335,6 +339,11 @@ func (m *Mjobs) assign(oneTask []kv, mutexName string, failover bool) {
 		runtimeNodes = append(runtimeNodes, key.(string))
 		return true
 	})
+
+	if len(runtimeNodes) == 0 {
+		m.Warn().Msgf("assign.runtimeNodes.size is 0\n")
+		return
+	}
 
 	for _, kv := range oneTask {
 		// 从状态信息里面获取tastName

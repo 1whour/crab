@@ -106,7 +106,12 @@ func (r *Gate) getAddress() string {
 
 // gate的地址
 // model.GateNodePrefix 注册到/scheduler/gate/node/gate_name
-func (r *Gate) registerGateNode() error {
+func (r *Gate) registerGateNode() (err error) {
+	defer func() {
+		if err != nil {
+			r.Error().Msgf("registerGateNode err:%s\n", err)
+		}
+	}()
 	addr := r.ServerAddr
 	if addr == "" {
 		r.Error().Msgf("The service startup address is empty, please set -s ip:port")
@@ -401,11 +406,7 @@ func (r *Gate) SubMain() {
 		return
 	}
 
-	go func() {
-		if err := r.registerGateNode(); err != nil {
-			r.Error().Msgf("registerGateNode fail:%s\n", err)
-		}
-	}()
+	go r.registerGateNode()
 
 	gin.SetMode(gin.ReleaseMode)
 	g := gin.New()
