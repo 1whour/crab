@@ -145,17 +145,22 @@ func (r *Gate) registerRuntimeWithKeepalive(runtimeName string, keepalive chan b
 }
 
 func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
-
+	// 生成本地队列的前缀
 	localPath := model.WatchLocalRuntimePrefix(runtimeName)
+	// watch本地队列的任务
 	localTask := defautlClient.Watch(r.ctx, localPath, clientv3.WithPrefix())
 
 	r.Debug().Msgf(">>> watch local:%s\n", localPath)
 	for ersp := range localTask {
 		for _, ev := range ersp.Events {
 
+			// 本地队列全名
 			localKey := string(ev.Kv.Key)
+			// 提取task名
 			taskName := model.TaskNameFromState(localKey)
+			// 生成全局队列名
 			globalKey := model.FullLocalToGlobalTask(localKey)
+			// 获取全局队列里面的task配置信息
 			rsp, err := defaultKVC.Get(r.ctx, globalKey)
 			if err != nil {
 				r.Warn().Msgf("gate.watchLocalRunq: get param %s\n", err)
@@ -174,6 +179,7 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 			r.Debug().Msgf("watchLocalRunq create(%t) modify(%t) \n", ev.IsCreate(), ev.IsModify())
 			switch {
 			case ev.IsCreate(), ev.IsModify():
+				// 如果是新建或者被修改过的，直接退送到客户端
 				if err := utils.WriteMessageTimeout(conn, value, r.WriteTime); err != nil {
 					r.Warn().Msgf("gate.watchLocalRunq, WriteMessageTimeout :%s\n", err)
 					continue

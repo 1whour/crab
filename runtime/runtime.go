@@ -121,7 +121,8 @@ func (r *Runtime) watchGateNode() {
 		r.storeAddr(string(ev.Value), string(ev.Key))
 	}
 
-	readGateNode := defautlClient.Watch(r.ctx, model.GateNodePrefix, clientv3.WithPrefix())
+	rev := rsp.Header.Revision + 1
+	readGateNode := defautlClient.Watch(r.ctx, model.GateNodePrefix, clientv3.WithPrefix(), clientv3.WithRev(rev))
 	for ersp := range readGateNode {
 		for _, ev := range ersp.Events {
 			switch {

@@ -30,7 +30,7 @@ var (
 
 const (
 	CanRun  = "canrun"  //可以运行，任务被创建时的状态
-	Running = "running" //任务被分配之后，运行中
+	Running = "running" //任务被分配之后，运行中, oneRuntime记录runtimeNode的编号
 	Stop    = "stop"    //这个任务被中止
 )
 
