@@ -39,9 +39,30 @@ type Runtime struct {
 
 	muWc sync.Mutex //保护多个go程写同一个conn
 
+	exec sync.Map
 	sync.RWMutex
-	exec  sync.Map
 	addrs map[string]string
+}
+
+// TODO 在gstl里面实现下给map套个sync.RWMutex的代码
+func (r *Runtime) storeAddr(key, value string) {
+	r.Lock()
+	r.addrs[value] = key
+	r.Unlock()
+}
+
+func (r *Runtime) deleteAddr(key string) {
+	r.Lock()
+	delete(r.addrs, key)
+	r.Unlock()
+}
+
+func (r *Runtime) keyAddr() []string {
+
+	r.RLock()
+	addrs := mapex.Keys(r.addrs)
+	r.RUnlock()
+	return addrs
 }
 
 func (r *Runtime) init() (err error) {
@@ -97,9 +118,7 @@ func (r *Runtime) watchGateNode() {
 
 	r.Debug().Msgf("runtime.watchGateNode:%v\n", rsp)
 	for _, ev := range rsp.Kvs {
-		r.Lock()
-		r.addrs[string(ev.Value)] = string(ev.Key)
-		r.Unlock()
+		r.storeAddr(string(ev.Value), string(ev.Key))
 	}
 
 	readGateNode := defautlClient.Watch(r.ctx, model.GateNodePrefix, clientv3.WithPrefix())
@@ -108,21 +127,15 @@ func (r *Runtime) watchGateNode() {
 			switch {
 			case ev.IsCreate():
 				// 把新的gate地址加到当前addrs里面
-				r.Lock()
-				r.addrs[string(ev.Kv.Value)] = string(ev.Kv.Key)
-				r.Unlock()
+				r.storeAddr(string(ev.Kv.Value), string(ev.Kv.Key))
 				r.Debug().Msgf("create gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
 			case ev.IsModify():
 				// 更新addrs里面的状态
-				r.Lock()
-				r.addrs[string(ev.Kv.Value)] = string(ev.Kv.Key)
-				r.Unlock()
+				r.storeAddr(string(ev.Kv.Value), string(ev.Kv.Key))
 				r.Debug().Msgf("modify gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
 			case ev.Type == clientv3.EventTypeDelete:
 				// 把被删除的gate从当前addrs里面移除
-				r.Lock()
-				delete(r.addrs, string(ev.Kv.Value))
-				r.Unlock()
+				r.deleteAddr(string(ev.Kv.Value))
 				r.Debug().Msgf("delete gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
 			}
 		}
@@ -143,15 +156,6 @@ func (r *Runtime) writeError(conn *websocket.Conn, to time.Duration, code int, m
 	r.muWc.Lock()
 	err = utils.WriteJsonTimeout(conn, model.RuntimeResp{Code: code, Message: msg}, to)
 	r.muWc.Unlock()
-	return err
-}
-
-// 写回正确的结果, TODO, 可能通过http返回
-func (r *Runtime) writeResult(conn *websocket.Conn, to time.Duration, result string) (err error) {
-	// 可能有多个go程写conn，加锁保护下
-	r.Lock()
-	err = utils.WriteJsonTimeout(conn, model.RuntimeResp{Result: result}, to)
-	r.Unlock()
 	return err
 }
 
@@ -283,10 +287,7 @@ func (r *Runtime) createConnRand() {
 
 	for {
 
-		r.Lock()
-		addrs := mapex.Keys(r.addrs)
-		r.Unlock()
-
+		addrs := r.keyAddr()
 		if len(addrs) == 0 {
 			r.Info().Msgf("no gate address available\n")
 			t.sleep()
