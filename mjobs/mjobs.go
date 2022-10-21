@@ -3,6 +3,7 @@ package mjobs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"runtime/debug"
@@ -64,7 +65,7 @@ func newKv(key string, value string) kv {
 
 func (m *Mjobs) watchGlobalTaskState() {
 	// 先获取节点状态
-	rsp, err := defaultKVC.Get(m.ctx, model.GlobalTaskPrefixState, clientv3.WithPrefix())
+	rsp, err := defaultKVC.Get(m.ctx, model.GlobalTaskPrefixState, clientv3.WithPrefix(), clientv3.WithFilterDelete())
 	if err == nil {
 		for _, e := range rsp.Kvs {
 			key := string(e.Key)
@@ -72,7 +73,7 @@ func (m *Mjobs) watchGlobalTaskState() {
 
 			state, err := model.ValueToState(e.Value)
 			if err != nil {
-				m.Error().Msgf("watchGlobalTaskState, value to state%s\n", err)
+				m.Error().Msgf("watchGlobalTaskState, value to state %s\n", err)
 				continue
 			}
 
@@ -139,7 +140,7 @@ func (m *Mjobs) taskLoop() {
 					defer func() {
 						if err := recover(); err != nil {
 							m.Error().Msgf("fail, %s\n", err)
-							fmt.Println(debug.Stack())
+							fmt.Printf("%s\n", debug.Stack())
 						}
 					}()
 					m.assign(oneTask, model.AssignTaskMutex, false)
@@ -184,27 +185,46 @@ func (m *Mjobs) oneRuntime(taskName string, param *model.Param, runtimeNodes []s
 		runtimeNode = state.RuntimeNode
 	}
 
+	if len(runtimeNode) == 0 {
+		m.Warn().Msgf("The runtimeNode is expected to be valuable")
+	}
+
 	// 生成本地队列的名字
 	ltaskPath := model.RuntimeNodeToLocalTask(runtimeNode, taskName)
 	// 向本地队列写入任务
 	if _, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun); err != nil {
 		return err
 	}
-	/*
-		// 获取全局队列中的状态
-		rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTaskState(taskName))
-		if err != nil {
-			return err
-		}
-	*/
+
+	fullTaskState := model.FullGlobalTaskState(taskName)
+	// 获取全局队列中的状态
+	rsp, err := defaultKVC.Get(m.ctx, fullTaskState)
+	if err != nil {
+		return err
+	}
 
 	// 更新状态中的runtimeNode
 	newValue, err := model.MarshalToJson(runtimeNode, model.Running)
 	if err != nil {
 		return err
 	}
+
+	txn := defaultKVC.Txn(m.ctx)
+	txnRsp, err := txn.If(
+		clientv3.Compare(clientv3.ModRevision(fullTaskState), "=", rsp.Kvs[0].ModRevision),
+	).Then(
+		clientv3.OpPut(fullTaskState, string(newValue)),
+	).Commit()
+
+	if err != nil {
+		return err
+	}
+
+	if !txnRsp.Succeeded {
+		err = errors.New("Transaction execution failed")
+	}
+
 	// 更新状态中的值
-	_, err = defaultKVC.Put(m.ctx, model.FullGlobalTaskState(taskName), string(newValue))
 	m.Debug().Msgf("oneRuntime:key(%s):value(%s)\n", model.FullGlobalTaskState(taskName), runtimeNode)
 	return err
 }

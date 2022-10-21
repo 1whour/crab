@@ -159,6 +159,8 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 	r.Debug().Msgf(">>> watch local:%s\n", localPath)
 	for ersp := range localTask {
 		for _, ev := range ersp.Events {
+			r.Debug().Msgf("watchLocalRunq create(%t) modify(%t) delete(%t), key(%s), value(%s)\n",
+				ev.IsCreate(), ev.IsModify(), ev.Type == clientv3.EventTypeDelete, ev.Kv.Key, ev.Kv.Value)
 
 			// 本地队列全名
 			localKey := string(ev.Kv.Key)
@@ -173,6 +175,9 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 				continue
 			}
 
+			if len(rsp.Kvs) == 0 {
+				continue
+			}
 			value := rsp.Kvs[0].Value
 
 			var param model.Param
@@ -182,7 +187,6 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 				continue
 			}
 
-			r.Debug().Msgf("watchLocalRunq create(%t) modify(%t) \n", ev.IsCreate(), ev.IsModify())
 			switch {
 			case ev.IsCreate(), ev.IsModify():
 				// 如果是新建或者被修改过的，直接退送到客户端
@@ -298,7 +302,7 @@ func (r *Gate) createTask(c *gin.Context) {
 		return
 	}
 
-	r.ok(c, "createTask 执行成功") //返回正确业务码
+	r.ok(c, "createTask Execution succeeded") //返回正确业务码
 }
 
 // 删除etcd里面task信息，也直接下发命令更新runtime里面信息
@@ -379,16 +383,16 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 
 	txnRsp, err := txn.Commit()
 	if err != nil {
-		r.error(c, 500, "事务执行失败err :%v", err)
+		r.error(c, 500, "Transaction execution failed err :%v", err)
 		return
 	}
 
 	if !txnRsp.Succeeded {
-		r.error(c, 500, "事务失败")
+		r.error(c, 500, "Transaction execution failed")
 		return
 	}
 
-	r.ok(c, "updateTask 执行成功") //返回正确业务码
+	r.ok(c, fmt.Sprintf("%s Execution succeeded", action)) //返回正确业务码
 }
 
 // 该模块入口函数
@@ -397,7 +401,11 @@ func (r *Gate) SubMain() {
 		return
 	}
 
-	go r.registerGateNode()
+	go func() {
+		if err := r.registerGateNode(); err != nil {
+			r.Error().Msgf("registerGateNode fail:%s\n", err)
+		}
+	}()
 
 	gin.SetMode(gin.ReleaseMode)
 	g := gin.New()
