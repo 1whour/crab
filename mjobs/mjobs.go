@@ -131,7 +131,7 @@ func (m *Mjobs) taskLoop() {
 
 					defer func() {
 						if err := recover(); err != nil {
-							m.Error().Msgf("fail, %s, %s\n", err)
+							m.Error().Msgf("fail, %s\n", err)
 							fmt.Println(debug.Stack())
 						}
 					}()
@@ -177,6 +177,7 @@ func (m *Mjobs) oneRuntime(taskName string, param *model.Param, runtimeNodes []s
 		return err
 	}
 	_, err = defaultKVC.Put(m.ctx, model.FullGlobalTaskState(taskName), runtimeNode)
+	m.Debug().Msgf("oneRuntime:key(%s):value(%s)\n", model.FullGlobalTaskState(taskName), runtimeNode)
 	return err
 }
 

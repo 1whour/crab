@@ -278,7 +278,7 @@ func (r *Gate) createTask(c *gin.Context) {
 	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", 0)).
 		Then(
 			clientv3.OpPut(globalTaskName, string(all)),
-			clientv3.OpPut(globalTaskStateName, model.CanRun),
+			clientv3.OpPut(globalTaskStateName, model.CanRunStr),
 		).Else()
 
 	txnRsp, err := txn.Commit()
@@ -297,60 +297,25 @@ func (r *Gate) createTask(c *gin.Context) {
 
 // 删除etcd里面task信息，也直接下发命令更新runtime里面信息
 func (r *Gate) deleteTask(c *gin.Context) {
-	var req model.Param
-	err := c.ShouldBind(&req)
-	if err != nil {
-		r.error(c, 500, "deleteTask:%v", err)
-		return
-	}
+	r.updateTaskCore(c, "deleteTask")
+}
 
-	// 生成数据队列的名字
-	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
-	// 生成状态队列的名字
-	globalTaskStateName := model.FullGlobalTaskState(req.Executer.TaskName)
+func (r *Gate) updateTask(c *gin.Context) {
+	r.updateTaskCore(c, "updateTask")
+}
 
-	// 先get，如果无值直接返回
-	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
-	if len(rsp.Kvs) == 0 {
-		r.error(c, 500, "Task is empty and cannot be remove:%s", globalTaskName)
-		return
-	}
-
-	req.SetRemove() //设置action为remove
-	all, err := json.Marshal(req)
-	if err != nil {
-		r.error(c, 500, "marshal req:%v", err)
-		return
-	}
-
-	txn := defaultKVC.Txn(r.ctx)
-	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", rsp.Kvs[0].Version)).
-		Then(
-			clientv3.OpPut(globalTaskName, string(all)),
-			clientv3.OpPut(globalTaskStateName, model.CanRun),
-		).Else()
-
-	txnRsp, err := txn.Commit()
-	if err != nil {
-		r.error(c, 500, "事务执行失败err :%v", err)
-		return
-	}
-
-	if !txnRsp.Succeeded {
-		r.error(c, 500, "事务失败")
-		return
-	}
-
-	r.ok(c, "removeTask 执行成功") //返回正确业务码
+// 更新etcd里面的task信息，置为静止，下发命令取消正在执行中的task
+func (r *Gate) stopTask(c *gin.Context) {
+	r.updateTaskCore(c, "stopTask")
 }
 
 // 更新etcd里面的task信息，也下发命令更新runtime里面信息
-func (r *Gate) updateTask(c *gin.Context) {
+func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 
 	var req model.Param
 	err := c.ShouldBind(&req)
 	if err != nil {
-		r.error(c, 500, "updateTask:%v", err)
+		r.error(c, 500, "%s:%v", action, err)
 		return
 	}
 
@@ -362,11 +327,18 @@ func (r *Gate) updateTask(c *gin.Context) {
 	// 先get，如果有值直接返回
 	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
 	if len(rsp.Kvs) == 0 {
-		r.error(c, 500, "Task is empty and cannot be updated:%s", globalTaskName)
+		r.error(c, 500, "Task is empty and cannot be %s:%s", action, globalTaskName)
 		return
 	}
 
-	req.SetUpdate()
+	switch action {
+	case "updateTask":
+		req.SetUpdate()
+	case "stopTask":
+		req.SetStop()
+	case "removeTask":
+		req.SetRemove()
+	}
 
 	all, err := json.Marshal(req)
 	if err != nil {
@@ -374,13 +346,29 @@ func (r *Gate) updateTask(c *gin.Context) {
 		return
 	}
 
-	r.Debug().Msgf("get version:%v, ModRevision:%v\n", rsp.Kvs[0].Version, rsp.Kvs[0].ModRevision)
+	rspState, err := defaultKVC.Get(r.ctx, globalTaskStateName)
+	if err != nil {
+		r.error(c, 500, "get.globalTaskStateName err :%v", err)
+		return
+	}
+
+	rspModRevision := rsp.Kvs[0].ModRevision
+	rspStateModRevision := rspState.Kvs[0].ModRevision
+	r.Debug().Msgf("get version:%v, ModRevision:%v\n", rsp.Kvs[0].Version, rspModRevision)
+
+	newValue, err := model.OnlyUpdateState(rspState.Kvs[0].Value, model.CanRun)
+	if err != nil {
+		r.error(c, 500, "updateTask, onlyUpdateState(CanRun) err :%v", err)
+		return
+	}
 
 	txn := defaultKVC.Txn(r.ctx)
-	txn.If(clientv3.Compare(clientv3.ModRevision(globalTaskName), "=", rsp.Kvs[0].ModRevision)).
+	txn.If(clientv3.Compare(clientv3.ModRevision(globalTaskName), "=", rspModRevision),
+		clientv3.Compare(clientv3.ModRevision(globalTaskStateName), "=", rspStateModRevision),
+	).
 		Then(
-			clientv3.OpPut(globalTaskName, string(all)),
-			clientv3.OpPut(globalTaskStateName, model.CanRun),
+			clientv3.OpPut(globalTaskName, string(all)),           //更新全局队列里面的数据
+			clientv3.OpPut(globalTaskStateName, string(newValue)), //更新全局状态队列里面的状态
 		).Else()
 
 	txnRsp, err := txn.Commit()
@@ -397,56 +385,6 @@ func (r *Gate) updateTask(c *gin.Context) {
 	r.ok(c, "updateTask 执行成功") //返回正确业务码
 }
 
-// 更新etcd里面的task信息，置为静止，下发命令取消正在执行中的task
-func (r *Gate) stopTask(c *gin.Context) {
-
-	var req model.Param
-	err := c.ShouldBind(&req)
-	if err != nil {
-		r.error(c, 500, "stopTask:%v", err)
-		return
-	}
-
-	// 创建数据队列
-	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
-	// 创建状态队列
-	globalTaskStateName := model.FullGlobalTaskState(req.Executer.TaskName)
-
-	// 先get，如果有值直接返回
-	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
-	if len(rsp.Kvs) == 0 {
-		r.error(c, 500, "Task is empty and cannot be stop:%s", globalTaskName)
-		return
-	}
-
-	req.SetStop() //设置action为stop
-	all, err := json.Marshal(req)
-	if err != nil {
-		r.error(c, 500, "marshal req:%v", err)
-		return
-	}
-
-	txn := defaultKVC.Txn(r.ctx)
-	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", rsp.Kvs[0].Version)).
-		Then(
-			clientv3.OpPut(globalTaskName, string(all)),
-			clientv3.OpPut(globalTaskStateName, model.CanRun),
-		).Else()
-
-	txnRsp, err := txn.Commit()
-	if err != nil {
-		r.error(c, 500, "事务执行失败err :%v", err)
-		return
-	}
-
-	if !txnRsp.Succeeded {
-		r.error(c, 500, "事务失败")
-		return
-	}
-
-	r.ok(c, "stopTask 执行成功") //返回正确业务码
-}
-
 // 该模块入口函数
 func (r *Gate) SubMain() {
 	if err := r.init(); err != nil {
@@ -459,8 +397,8 @@ func (r *Gate) SubMain() {
 	g := gin.New()
 	g.GET(model.TASK_STREAM_URL, r.stream) //流式接口，主动推送任务至runtime
 	g.POST(model.TASK_CREATE_URL, r.createTask)
-	g.DELETE(model.TASK_DELETE_URL, r.deleteTask)
 	g.PUT(model.TASK_UPDATE_URL, r.updateTask)
+	g.DELETE(model.TASK_DELETE_URL, r.deleteTask)
 	g.POST(model.TASK_STOP_URL, r.stopTask)
 
 	r.Debug().Msgf("gate:serverAddr:%s\n", r.ServerAddr)
