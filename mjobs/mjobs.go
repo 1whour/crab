@@ -57,19 +57,36 @@ type kv struct {
 	val string
 }
 
+func newKv(key string, value string) kv {
+	return kv{key: key, val: value}
+}
+
 func (m *Mjobs) watchGlobalTaskState() {
+	// 先获取节点状态
+	rsp, err := defaultKVC.Get(m.ctx, model.GlobalTaskPrefixState, clientv3.WithPrefix())
+	if err == nil {
+		for _, e := range rsp.Kvs {
+			key := string(e.Key)
+			value := string(e.Value)
+			if value == model.CanRun {
+				m.taskChan <- newKv(key, value)
+			}
+		}
+	}
 
 	readGlobal := defautlClient.Watch(m.ctx, model.GlobalTaskPrefixState, clientv3.WithPrefix())
 	for ersp := range readGlobal {
 		for _, ev := range ersp.Events {
+			key := string(ev.Kv.Key)
+			value := string(ev.Kv.Value)
 			switch {
 			case ev.IsCreate():
 				m.Debug().Msgf("create global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
-				m.taskChan <- kv{key: string(ev.Kv.Key), val: string(ev.Kv.Value)}
+				m.taskChan <- newKv(key, value)
 
 			case ev.IsModify():
 				m.Debug().Msgf("update global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
-				m.taskChan <- kv{key: string(ev.Kv.Key), val: string(ev.Kv.Value)}
+				m.taskChan <- newKv(key, value)
 
 			case ev.Type == clientv3.EventTypeDelete:
 				m.Debug().Msgf("delete global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
