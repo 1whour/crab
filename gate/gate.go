@@ -19,6 +19,12 @@ import (
 
 var upgrader = websocket.Upgrader{}
 
+const (
+	updateTask = "updateTask"
+	deleteTask = "deleteTask"
+	stopTask   = "stopTask"
+)
+
 // TODO, 规范下错误码
 
 // Gate模块定位是网关
@@ -297,16 +303,16 @@ func (r *Gate) createTask(c *gin.Context) {
 
 // 删除etcd里面task信息，也直接下发命令更新runtime里面信息
 func (r *Gate) deleteTask(c *gin.Context) {
-	r.updateTaskCore(c, "deleteTask")
+	r.updateTaskCore(c, deleteTask)
 }
 
 func (r *Gate) updateTask(c *gin.Context) {
-	r.updateTaskCore(c, "updateTask")
+	r.updateTaskCore(c, updateTask)
 }
 
 // 更新etcd里面的task信息，置为静止，下发命令取消正在执行中的task
 func (r *Gate) stopTask(c *gin.Context) {
-	r.updateTaskCore(c, "stopTask")
+	r.updateTaskCore(c, stopTask)
 }
 
 // 更新etcd里面的task信息，也下发命令更新runtime里面信息
@@ -332,11 +338,11 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 	}
 
 	switch action {
-	case "updateTask":
+	case updateTask:
 		req.SetUpdate()
-	case "stopTask":
+	case stopTask:
 		req.SetStop()
-	case "removeTask":
+	case deleteTask:
 		req.SetRemove()
 	}
 
