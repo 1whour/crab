@@ -47,7 +47,7 @@ type Runtime struct {
 // TODO 在gstl里面实现下给map套个sync.RWMutex的代码
 func (r *Runtime) storeAddr(key, value string) {
 	r.Lock()
-	r.addrs[value] = key
+	r.addrs[key] = value
 	r.Unlock()
 }
 
