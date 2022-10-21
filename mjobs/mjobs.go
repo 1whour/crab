@@ -69,7 +69,14 @@ func (m *Mjobs) watchGlobalTaskState() {
 		for _, e := range rsp.Kvs {
 			key := string(e.Key)
 			value := string(e.Value)
-			if value == model.CanRun {
+
+			state, err := model.ValueToState(e.Value)
+			if err != nil {
+				m.Error().Msgf("watchGlobalTaskState, value to state%s\n", err)
+				continue
+			}
+
+			if state.IsCanRun() {
 				m.taskChan <- newKv(key, value)
 			}
 		}
@@ -171,12 +178,25 @@ func (m *Mjobs) oneRuntime(taskName string, param *model.Param, runtimeNodes []s
 		runtimeNode = string(rsp.Kvs[0].Value)
 	}
 
-	// 向本地队列写入任务
+	// 生成本地队列的名字
 	ltaskPath := model.RuntimeNodeToLocalTask(runtimeNode, taskName)
+	// 向本地队列写入任务
 	if _, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun); err != nil {
 		return err
 	}
-	_, err = defaultKVC.Put(m.ctx, model.FullGlobalTaskState(taskName), runtimeNode)
+	// 获取全局队列中的状态
+	rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTaskState(taskName))
+	if err != nil {
+		return err
+	}
+
+	// 更新状态中的runtimeNode
+	newValue, err := model.OnlyUpdateRuntimeNode(rsp.Kvs[0].Value, runtimeNode)
+	if err != nil {
+		return err
+	}
+	// 更新状态中的值
+	_, err = defaultKVC.Put(m.ctx, model.FullGlobalTaskState(taskName), string(newValue))
 	m.Debug().Msgf("oneRuntime:key(%s):value(%s)\n", model.FullGlobalTaskState(taskName), runtimeNode)
 	return err
 }
@@ -188,7 +208,7 @@ func (m *Mjobs) broadcast(taskName string, param *model.Param) (err error) {
 		// 向本地队列写入任务
 		// TODO 事务
 		_, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun)
-		defaultKVC.Put(m.ctx, model.FullGlobalTaskState(taskName), model.Running)
+		defaultKVC.Put(m.ctx, model.FullGlobalTaskState(taskName), model.RunningJSON)
 
 		return err == nil
 	})
@@ -305,8 +325,14 @@ func (m *Mjobs) assign(oneTask []kv, mutexName string, failover bool) {
 
 		if len(rsp.Kvs) > 0 {
 			// 过滤正在运行中的任务
-			val := string(rsp.Kvs[0].Value)
-			if val != model.CanRun {
+			val := rsp.Kvs[0].Value
+			state, err := model.ValueToState(val)
+			if err != nil {
+				m.Error().Msgf("value to state%s\n", err)
+				continue
+			}
+
+			if !state.IsCanRun() {
 				continue
 			}
 		}

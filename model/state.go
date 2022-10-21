@@ -8,11 +8,17 @@ const (
 	Stop    = "stop"    //这个任务被中止
 )
 
-var CanRunStr string
+var (
+	CanRunJSON  string
+	RunningJSON string
+)
 
 func init() {
-	canRunBytes, _ := State{State: CanRun}.MarshalToJson()
-	CanRunStr = string(canRunBytes)
+	canRun, _ := MarshalToJson("", CanRun)
+	running, _ := MarshalToJson("", Running)
+
+	CanRunJSON = string(canRun)
+	RunningJSON = string(running)
 }
 
 type State struct {
@@ -32,8 +38,18 @@ func (s State) IsCanRun() bool {
 	return s.State == CanRun
 }
 
-func (s State) MarshalToJson() ([]byte, error) {
-	return json.Marshal(s)
+func MarshalToJson(runtimeNode string, state string) ([]byte, error) {
+	return json.Marshal(&State{RuntimeNode: runtimeNode, State: state})
+}
+
+func OnlyUpdateRuntimeNode(value []byte, runtimeNode string) ([]byte, error) {
+	s, err := ValueToState(value)
+	if err != nil {
+		return nil, err
+	}
+
+	s.RuntimeNode = runtimeNode
+	return json.Marshal(&s)
 }
 
 func OnlyUpdateState(value []byte, state string) ([]byte, error) {
@@ -43,7 +59,7 @@ func OnlyUpdateState(value []byte, state string) ([]byte, error) {
 	}
 
 	s.State = state
-	return s.MarshalToJson()
+	return json.Marshal(&s)
 }
 
 func ValueToState(value []byte) (s State, err error) {

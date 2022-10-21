@@ -278,7 +278,7 @@ func (r *Gate) createTask(c *gin.Context) {
 	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", 0)).
 		Then(
 			clientv3.OpPut(globalTaskName, string(all)),
-			clientv3.OpPut(globalTaskStateName, model.CanRunStr),
+			clientv3.OpPut(globalTaskStateName, model.CanRunJSON),
 		).Else()
 
 	txnRsp, err := txn.Commit()
