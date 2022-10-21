@@ -175,7 +175,13 @@ func (m *Mjobs) oneRuntime(taskName string, param *model.Param, runtimeNodes []s
 			m.Error().Msgf("oneRuntime %s\n", err)
 			return err
 		}
-		runtimeNode = string(rsp.Kvs[0].Value)
+		state, err := model.ValueToState(rsp.Kvs[0].Value)
+		if err != nil {
+			m.Error().Msgf("oneRuntime ValueToState %s\n", err)
+			return err
+		}
+
+		runtimeNode = state.RuntimeNode
 	}
 
 	// 生成本地队列的名字
@@ -184,14 +190,16 @@ func (m *Mjobs) oneRuntime(taskName string, param *model.Param, runtimeNodes []s
 	if _, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun); err != nil {
 		return err
 	}
-	// 获取全局队列中的状态
-	rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTaskState(taskName))
-	if err != nil {
-		return err
-	}
+	/*
+		// 获取全局队列中的状态
+		rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTaskState(taskName))
+		if err != nil {
+			return err
+		}
+	*/
 
 	// 更新状态中的runtimeNode
-	newValue, err := model.OnlyUpdateRuntimeNode(rsp.Kvs[0].Value, runtimeNode)
+	newValue, err := model.MarshalToJson(runtimeNode, model.Running)
 	if err != nil {
 		return err
 	}
