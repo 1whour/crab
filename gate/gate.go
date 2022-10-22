@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -50,7 +49,6 @@ func (g *Gate) NodeName() string {
 }
 
 var (
-	conns         sync.Map
 	defautlClient *clientv3.Client
 	defaultKVC    clientv3.KV
 )

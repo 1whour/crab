@@ -29,7 +29,7 @@ var (
 // 1. 如果是内网模式，runtime和gate在互相可访达的网络, 直接从etcd watch gate节点信息
 // 2. 如果是外网模式，runtime只要写一个或者多个GateAddr, 做客户的负载均衡
 type Runtime struct {
-	EtcdAddr     []string      `clop:"short;long" usage:"etcd address"`
+	EtcdAddr     []string      `clop:"short;long;greedy" usage:"etcd address"`
 	GateAddr     []string      `clop:"long" usage:"endpoint address"`
 	Level        string        `clop:"short;long" usage:"log level" default:"error"`
 	WriteTimeout time.Duration `clop:"short;long" usage:"Timeout when writing messages" default:"3s"`

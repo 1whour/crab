@@ -1,6 +1,7 @@
 package clicrud
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -8,9 +9,11 @@ import (
 
 	"github.com/gnh123/scheduler/model"
 	"github.com/guonaihong/gout"
+	"gopkg.in/yaml.v3"
 )
 
 type CrudOpt struct {
+	TaskName string   `clop:"short;long" usage:"If set, the task name in the configuration file will be replaced"`
 	FileName string   `clop:"short;long" usage:"config filename" valid:"required"`
 	GateAddr []string `clop:"short;long" usage:"gate address" valid:"required"`
 	Debug    bool     `clop:"short;long" usage:"debug mode"`
@@ -72,9 +75,29 @@ func (c *CrudOpt) Crud(url string, method string) error {
 	code := 0
 	s := ""
 	req := gout.New().SetMethod(strings.ToUpper(method)).SetURL(url).Debug(c.Debug)
+
+	var param model.Param
 	if strings.HasSuffix(fileName, ".yaml") || strings.HasSuffix(fileName, ".yml") {
+		if c.TaskName != "" {
+			if err := yaml.Unmarshal(all, &param); err != nil {
+				return err
+			}
+			param.Executer.TaskName = c.TaskName
+			if all, err = yaml.Marshal(param); err != nil {
+				return err
+			}
+		}
 		req.SetYAML(all)
 	} else if strings.HasSuffix(fileName, ".json") {
+		if c.TaskName != "" {
+			if err := json.Unmarshal(all, &param); err != nil {
+				return err
+			}
+			param.Executer.TaskName = c.TaskName
+			if all, err = json.Marshal(param); err != nil {
+				return err
+			}
+		}
 		req.SetJSON(all)
 	} else {
 		req.SetBody(all)

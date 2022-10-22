@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gnh123/scheduler/cmd/clicrud"
+	"github.com/gnh123/scheduler/cmd/etcd"
 	"github.com/gnh123/scheduler/gate"
 	"github.com/gnh123/scheduler/mjobs"
 	"github.com/gnh123/scheduler/runtime"
@@ -23,6 +24,8 @@ type scheduler struct {
 	clicrud.Update `clop:"subcommand" usage:"Update current task from configuration file"`
 	// mjobs子命令，负责任务分发，故障转移
 	mjobs.Mjobs `clop:"subcommand" usage:"mjobs"`
+	// etcd子命令, 主要用于测试
+	etcd.Etcd `clop:"subcommand" usage:"etcd"`
 }
 
 func main() {
