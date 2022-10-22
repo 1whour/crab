@@ -12,10 +12,13 @@ import (
 // 本子命令主要是为了测试脚本而写
 
 type Etcd struct {
-	GlobalTask bool     `clop:"short;long" usage:"global task"`
-	EtcdAddr   []string `clop:"short;long;greedy" usage:"etcd address" valid:"required"`
-	TaskName   string   `clop:"short;long" usage:"task name" valid:"required"`
-	Get        bool     `clop:"long" usage:"get etcd value"`
+	GlobalTask bool `clop:"short;long" usage:"global task"`
+	StateTask  bool `clop:"short;long" usage:"global state task"`
+
+	EtcdAddr []string `clop:"short;long;greedy" usage:"etcd address" valid:"required"`
+	TaskName string   `clop:"short;long" usage:"task name" valid:"required"`
+	Get      bool     `clop:"long" usage:"get etcd value"`
+	Debug    bool     `clop:"long" usage:"debug mode"`
 }
 
 var (
@@ -34,6 +37,9 @@ func (e *Etcd) init() (err error) {
 }
 
 func (e *Etcd) SubMain() {
+	if e.Debug {
+		fmt.Println(e.EtcdAddr)
+	}
 	if err := e.init(); err != nil {
 		fmt.Println(err)
 		return
@@ -42,6 +48,8 @@ func (e *Etcd) SubMain() {
 	keyName := ""
 	if e.GlobalTask {
 		keyName = model.FullGlobalTask(e.TaskName)
+	} else if e.StateTask {
+		keyName = model.FullGlobalTaskState(e.TaskName)
 	}
 
 	if e.Get {

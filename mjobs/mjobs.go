@@ -32,6 +32,12 @@ type Mjobs struct {
 	runtimeNode sync.Map
 }
 
+type mParam struct {
+	model.Param
+	stateModRevision int
+	dataVersion      int
+}
+
 var (
 	defautlClient *clientv3.Client
 	defaultKVC    clientv3.KV
@@ -55,12 +61,13 @@ func (m *Mjobs) init() (err error) {
 }
 
 type kv struct {
-	key string
-	val string
+	key     string
+	val     string
+	version int
 }
 
-func newKv(key string, value string) kv {
-	return kv{key: key, val: value}
+func newKv(key string, value string, version int) kv {
+	return kv{key: key, val: value, version: version}
 }
 
 func (m *Mjobs) watchGlobalTaskState() {
@@ -78,7 +85,7 @@ func (m *Mjobs) watchGlobalTaskState() {
 			}
 
 			if state.IsCanRun() {
-				m.taskChan <- newKv(key, value)
+				m.taskChan <- newKv(key, value, int(e.ModRevision))
 			}
 		}
 	}
@@ -89,17 +96,17 @@ func (m *Mjobs) watchGlobalTaskState() {
 		for _, ev := range ersp.Events {
 			key := string(ev.Kv.Key)
 			value := string(ev.Kv.Value)
-			switch {
-			case ev.IsCreate():
-				m.Debug().Msgf("create global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
-				m.taskChan <- newKv(key, value)
 
-			case ev.IsModify():
-				m.Debug().Msgf("update global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
-				m.taskChan <- newKv(key, value)
+			m.Debug().Msgf("watch create(%t) update(%t) delete(%t) global task:%s, state:%s, version:%d\n",
+				ev.IsCreate(), ev.IsModify(), ev.Type == clientv3.EventTypeDelete,
+				ev.Kv.Key, ev.Kv.Value,
+				ev.Kv.Version)
+
+			switch {
+			case ev.IsCreate(), ev.IsModify():
+				m.taskChan <- newKv(key, value, int(ev.Kv.ModRevision))
 
 			case ev.Type == clientv3.EventTypeDelete:
-				m.Debug().Msgf("delete global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
 			}
 		}
 	}
@@ -154,7 +161,7 @@ func (m *Mjobs) taskLoop() {
 	}
 }
 
-func (m *Mjobs) setTaskToLocalrunq(taskName string, param *model.Param, runtimeNodes []string, failover bool) (err error) {
+func (m *Mjobs) setTaskToLocalrunq(taskName string, param *mParam, runtimeNodes []string, failover bool) (err error) {
 	if param.IsOneRuntime() {
 		err = m.oneRuntime(taskName, param, runtimeNodes, failover)
 	} else if param.IsBroadcast() {
@@ -168,13 +175,21 @@ func (m *Mjobs) setTaskToLocalrunq(taskName string, param *model.Param, runtimeN
 // 执行单机任务
 // 如果是create的任务，或者failover故障转移的任务，任选一个runtime执行
 // 如果是Stop, Delete, update 还是由原先的runtime执行
-func (m *Mjobs) oneRuntime(taskName string, param *model.Param, runtimeNodes []string, failover bool) (err error) {
+func (m *Mjobs) oneRuntime(taskName string, param *mParam, runtimeNodes []string, failover bool) (err error) {
 	runtimeNode := utils.SliceRandOne(runtimeNodes)
 	rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTaskState(taskName))
 	if err != nil {
 		m.Error().Msgf("oneRuntime %s\n", err)
 		return err
 	}
+
+	if param.stateModRevision != int(rsp.Kvs[0].ModRevision) {
+		// 这个key在短时间内，连续多次修改，会丢弃过期的任务
+		m.Debug().Msgf("The current key value is old, and the task is lost, stateModRevision:%d, current version:%d, taskname:%s, action:%s\n",
+			param.stateModRevision, rsp.Kvs[0].ModRevision, param.Executer.TaskName, param.Action)
+		return nil
+	}
+
 	if !failover && !param.IsCreate() {
 		state, err := model.ValueToState(rsp.Kvs[0].Value)
 		if err != nil {
@@ -232,7 +247,7 @@ func (m *Mjobs) oneRuntime(taskName string, param *model.Param, runtimeNodes []s
 }
 
 // 广播任务
-func (m *Mjobs) broadcast(taskName string, param *model.Param) (err error) {
+func (m *Mjobs) broadcast(taskName string, param *mParam) (err error) {
 	m.runtimeNode.Range(func(key, val any) bool {
 		ltaskPath := model.RuntimeNodeToLocalTask(key.(string), taskName)
 		// 向本地队列写入任务
@@ -389,8 +404,11 @@ func (m *Mjobs) assign(oneTask []kv, mutexName string, failover bool) {
 				m.Warn().Msgf("get %s value is nil\n", model.FullGlobalTask(taskName))
 				continue
 			}
-			param := model.Param{}
-			err = json.Unmarshal(rsp.Kvs[0].Value, &param)
+			param := mParam{}
+			param.stateModRevision = kv.version
+			param.dataVersion = int(rsp.Kvs[0].Version)
+			//param.version = int(rsp.Kvs[0].Version)
+			err = json.Unmarshal(rsp.Kvs[0].Value, &param.Param)
 			if err != nil {
 				m.Error().Msgf("Unmarshal global task fail:%s\n", err)
 				continue
