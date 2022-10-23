@@ -87,7 +87,7 @@ func (m *Mjobs) watchGlobalTaskState() {
 			}
 
 			if state.IsCanRun() {
-				go m.assign(newKv(key, value, int(ev.ModRevision)), key, false)
+				go m.assignMutex(newKv(key, value, int(ev.ModRevision)), false)
 			}
 		}
 	}
@@ -107,7 +107,7 @@ func (m *Mjobs) watchGlobalTaskState() {
 			switch {
 			case ev.IsCreate(), ev.IsModify():
 
-				go m.assign(newKv(key, value, int(ev.Kv.ModRevision)), key, false)
+				go m.assignMutex(newKv(key, value, int(ev.Kv.ModRevision)), false)
 			case ev.Type == clientv3.EventTypeDelete:
 			}
 		}
@@ -262,7 +262,7 @@ func (m *Mjobs) failover(fullRuntime string) error {
 	}
 
 	for _, keyval := range rsp.Kvs {
-		m.assign(kv{key: string(keyval.Key), val: string(keyval.Value)}, model.AssignTaskMutex(string(keyval.Key)), true)
+		m.assignMutex(kv{key: string(keyval.Key), val: string(keyval.Value)}, true)
 
 		_, err := defaultKVC.Delete(m.ctx, string(keyval.Key))
 		if err != nil {
@@ -275,9 +275,10 @@ func (m *Mjobs) failover(fullRuntime string) error {
 	return nil
 }
 
-// 分配任务的逻辑，使用分布式锁
-func (m *Mjobs) assign(oneTask kv, mutexName string, failover bool) {
-	m.Debug().Msgf("call assign\n")
+// 使用分布式锁
+func (m *Mjobs) assignMutex(oneTask kv, failover bool) {
+	mutexName := model.AssignTaskMutex(oneTask.key)
+
 	s, _ := concurrency.NewSession(defautlClient)
 	defer s.Close()
 
@@ -287,8 +288,19 @@ func (m *Mjobs) assign(oneTask kv, mutexName string, failover bool) {
 	// 创建分布式锁
 	l := concurrency.NewMutex(s, mutexName)
 
-	l.Lock(ctx)
+	// 获取锁失败直接返回
+	if err := l.TryLock(ctx); err != nil {
+		m.Debug().Msgf("assign trylock:%s\n", err)
+		return
+	}
 	defer l.Unlock(ctx)
+
+	m.assign(oneTask, failover)
+}
+
+// 分配任务的逻辑
+func (m *Mjobs) assign(oneTask kv, failover bool) {
+	m.Debug().Msgf("call assign, key:%s\n", oneTask.key)
 
 	var runtimeNodes []string
 	m.runtimeNode.Range(func(key, value any) bool {
