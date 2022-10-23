@@ -118,9 +118,9 @@ var createOneTask = func() []kv {
 	return make([]kv, 0, 100)
 }
 
-func (m *Mjobs) setTaskToLocalrunq(taskName string, param *mParam, runtimeNodes []string, failover bool) (err error) {
+func (m *Mjobs) setTaskToLocalrunq(taskName string, param *mParam, runtimeNode string, failover bool) (err error) {
 	if param.IsOneRuntime() {
-		err = m.oneRuntime(taskName, param, runtimeNodes, failover)
+		err = m.oneRuntime(taskName, param, runtimeNode, failover)
 	} else if param.IsBroadcast() {
 		err = m.broadcast(taskName, param)
 	} else {
@@ -132,8 +132,7 @@ func (m *Mjobs) setTaskToLocalrunq(taskName string, param *mParam, runtimeNodes 
 // 执行单机任务
 // 如果是create的任务，或者failover故障转移的任务，任选一个runtime执行
 // 如果是Stop, Delete, update 还是由原先的runtime执行
-func (m *Mjobs) oneRuntime(taskName string, param *mParam, runtimeNodes []string, failover bool) (err error) {
-	runtimeNode := utils.SliceRandOne(runtimeNodes)
+func (m *Mjobs) oneRuntime(taskName string, param *mParam, runtimeNode string, failover bool) (err error) {
 	fullTaskState := model.FullGlobalTaskState(taskName)
 	// 获取全局队列中的状态
 	rsp, err := defaultKVC.Get(m.ctx, fullTaskState)
@@ -194,12 +193,7 @@ func (m *Mjobs) oneRuntime(taskName string, param *mParam, runtimeNodes []string
 // 广播任务
 func (m *Mjobs) broadcast(taskName string, param *mParam) (err error) {
 	m.runtimeNode.Range(func(key, val any) bool {
-		ltaskPath := model.RuntimeNodeToLocalTask(key.(string), taskName)
-		// 向本地队列写入任务
-		// TODO 事务
-		_, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun)
-		defaultKVC.Put(m.ctx, model.FullGlobalTaskState(taskName), model.RunningJSON)
-
+		err = m.oneRuntime(taskName, param, key.(string), false)
 		return err == nil
 	})
 
@@ -320,6 +314,7 @@ func (m *Mjobs) assign(oneTask kv, failover bool) {
 		m.Debug().Msgf("taskName is empty, %s\n", kv.key)
 		return
 	}
+
 	// 查看这个task的状态
 	statePath := model.FullGlobalTaskState(taskName)
 	rsp, err := defaultKVC.Get(m.ctx, statePath)
@@ -362,7 +357,8 @@ func (m *Mjobs) assign(oneTask kv, failover bool) {
 		return
 	}
 
-	if err = m.setTaskToLocalrunq(taskName, &param, runtimeNodes, failover); err != nil {
+	runtimeNode := utils.SliceRandOne(runtimeNodes)
+	if err = m.setTaskToLocalrunq(taskName, &param, runtimeNode, failover); err != nil {
 		m.Error().Msgf("set task to local runq fail:%s\n", err)
 		return
 	}
