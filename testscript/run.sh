@@ -16,7 +16,7 @@ function create_and_check() {
   RESULT=`./scheduler etcd --get -s -t $TASK_NAME -e $ETCD_ADDR`
 
   # 输出执行的命令，方便debug
-  echo "./scheduler etcd --get -s -t $TASK_NAME -e $ETCD_ADDR --debug"
+  echo "./scheduler etcd --get -s -t $TASK_NAME -e $ETCD_ADDR"
 
   check_have_result "$RESULT" "create_and_check"
 }
@@ -60,7 +60,7 @@ function update_and_check_core() {
     # 如果是先创建任务，再update或者stop，应该有值
     if [[ -z $ONLY ]];then
       RESULT=`./scheduler etcd --get -s -t $TASK_NAME -e $ETCD_ADDR`
-      echo "./scheduler etcd --get -s -t $TASK_NAME -e $ETCD_ADDR --debug"
+      echo "./scheduler etcd --get -s -t $TASK_NAME -e $ETCD_ADDR"
       check_have_result "$RESULT" $FUNC_NAME
     else
       check_empty_result "$RESULT" $FUNC_NAME
@@ -72,23 +72,31 @@ function update_and_check_core() {
 # 先创建再删除
 function create_and_delete_check() {
   TASK_NAME=`uuidgen`
-  create $TASK_NAME
+  create_and_check $TASK_NAME
   delete_and_check $TASK_NAME "create_and_delete_check"
+}
+
+function create_and_stop_check() {
+  TASK_NAME=`uuidgen`
+  create_and_check $TASK_NAME
+  update_and_check_core `uuidgen` "create_and_stop_check" "stop"
 }
 
 # 先创建再更新
 function create_and_update_check() {
-  echo "TODO"
+  TASK_NAME=`uuidgen`
+  create_and_check $TASK_NAME
+  update_and_check_core `uuidgen` "create_and_update_check" "update"
 }
 
 # 对一个不存在的任务更新，应该报错
-function update_and_check() {
-  update_and_check_core `uuidgen` "update_and_check" "update" "onlyupdate"
+function only_update_and_check() {
+  update_and_check_core `uuidgen` "only_update_and_check" "update" "onlyupdate"
 }
 
 # stop一个不存在的任务，应该报错
-function stop_and_check() {
-  update_and_check_core `uuidgen` "stop_and_check" "stop" "onlystop"
+function only_stop_and_check() {
+  update_and_check_core `uuidgen` "only_stop_and_check" "stop" "onlystop"
 }
 
 # 检查create 之后的结果
@@ -112,8 +120,24 @@ function check_empty_result() {
   fi
 }
 
+# 先创建，再删除。
+create_and_delete_check
+
+# 先创建，再更新
+create_and_stop_check
+
+# 先创建，再更新
+create_and_update_check
+
+# 只创建，状态应该是running
 create_and_check
+
+# 删除一个不存在的任务，etcd里面数据应该是空的
 delete_and_check `uuidgen`
-update_and_check
-stop_and_check
-#create_and_delete_check
+
+# 更新一个不存在的任务，etcd里面数据应该是空的
+only_update_and_check
+
+# stop一个不存在的任务，etcd里面的数据应该是空的
+only_stop_and_check
+
