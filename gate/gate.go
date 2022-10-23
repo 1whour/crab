@@ -28,7 +28,7 @@ const (
 
 // Gate模块定位是网关
 // 1.注册自己的信息至etcd中
-// 2.维护lambda过来的长连接
+// 2.维护runtime或者lambda过来的长连接
 // 3.维护管理接口，保存到数据库中
 type Gate struct {
 	ServerAddr   string        `clop:"short;long" usage:"server address"`

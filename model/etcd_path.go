@@ -9,24 +9,29 @@ var (
 	//gate模块在etcd注册的node信息, 作用是
 	// 在内网模式，让runtime发现gate
 	// val是ip
-	GateNodePrefix = "/scheduler/node/gate"
+	GateNodePrefix = "/scheduler/v1/node/gate"
 
 	//全局任务队列, 消费者是mjobs模块，使用一定的负载均衡策略分配任务
-	GlobalTaskPrefix = "/scheduler/global/runq/task/data"
+	GlobalTaskPrefix = "/scheduler/v1/global/runq/task/data"
 
 	//全局任务队列， 状态canrun/running/stop
-	GlobalTaskPrefixState = "/scheduler/global/runq/task/state"
+	GlobalTaskPrefixState = "/scheduler/v1/global/runq/task/state"
 
 	//本地任务队列, key是LocalRuntimeTaskPrefix+runtime.name
 	//如果runtime的连接的gateway进程异常退出，也不需要迁移任务
-	LocalRuntimeTaskPrefix = "/scheduler/local/runq/task/runtime"
+	LocalRuntimeTaskPrefix = "/scheduler/v1/local/runq/task/runtime"
 
 	//注册的runtime节点信息, 路径后面是runtimeName
-	RuntimeNodePrefix = "/scheduler/runtime"
+	RuntimeNodePrefix = "/scheduler/v1/runtime"
 
 	//分配task用的分布式锁
-	AssignTaskMutex = "/scheduler/task/assign/mutex"
+	AssignTaskMutexPrefix = "/scheduler/v1/task/assign/mutex"
 )
+
+func AssignTaskMutex(fullPath string) string {
+	taskName := TaskNameFromState(fullPath)
+	return fmt.Sprintf("%s/%s", AssignTaskMutexPrefix, taskName)
+}
 
 // 生成本地任务队列全路径
 func WatchLocalRuntimePrefix(runtimeName string) string {

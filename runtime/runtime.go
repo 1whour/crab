@@ -28,6 +28,7 @@ var (
 // 负责连接到gate服务
 // 1. 如果是内网模式，runtime和gate在互相可访达的网络, 直接从etcd watch gate节点信息
 // 2. 如果是外网模式，runtime只要写一个或者多个GateAddr, 做客户的负载均衡
+// 3. 可以执行http, shell, grpc任务
 type Runtime struct {
 	EtcdAddr     []string      `clop:"short;long;greedy" usage:"etcd address"`
 	GateAddr     []string      `clop:"long" usage:"endpoint address"`
