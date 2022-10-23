@@ -87,7 +87,7 @@ func (m *Mjobs) watchGlobalTaskState() {
 			}
 
 			if state.IsCanRun() {
-				go m.assignMutex(newKv(key, value, int(ev.ModRevision)), false)
+				go m.assignMutex(newKv(key, value, int(rsp.Header.Revision)), false)
 			}
 		}
 	}
@@ -272,7 +272,7 @@ func (m *Mjobs) failover(fullRuntime string) error {
 func (m *Mjobs) assignMutex(oneTask kv, failover bool) {
 	state := model.State{}
 	if err := json.Unmarshal([]byte(oneTask.val), &state.State); err != nil {
-		m.Warn().Msgf("assignMutex.Unmarshal %s, val:%s\n", err, state.State)
+		m.Warn().Msgf("assignMutex.Unmarshal %s, (val:%s)\n", err, state.State)
 		return
 	}
 
@@ -333,16 +333,8 @@ func (m *Mjobs) assign(oneTask kv, failover bool) {
 		return
 	}
 
-	// 查看这个task的状态
-	statePath := model.FullGlobalTaskState(taskName)
-	rsp, err := defaultKVC.Get(m.ctx, statePath)
-	if err != nil {
-		m.Error().Msgf("get global task state %s, path %s\n", err, statePath)
-		return
-	}
-
 	m.Debug().Msgf("assign, taskName %s\n", taskName)
-	rsp, err = defaultKVC.Get(m.ctx, model.FullGlobalTask(taskName))
+	rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTask(taskName), clientv3.WithRev(int64(oneTask.version)))
 	if err != nil {
 		m.Error().Msgf("get global task path fail:%s\n", err)
 		return
