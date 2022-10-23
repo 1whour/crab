@@ -238,7 +238,7 @@ func (m *Mjobs) watchRuntimeNode() {
 	}
 }
 
-// 重启服务
+// 检查全局队列中的死任务，重新加载到内存中
 func (m *Mjobs) restart() {
 
 }
@@ -247,7 +247,6 @@ func (m *Mjobs) restart() {
 // 监听runtime node的存活，如果死掉，把任务重新分发下
 // 1.如果是故障转移的广播任务, 按道理，只应该在没有的机器上创建这个任务, 目前广播 TODO优化
 // 2.如果是单runtime任务，任选一个runtime执行
-
 func (m *Mjobs) failover(fullRuntime string) error {
 	localPrefix := model.RuntimeNodeToLocalTaskPrefix(fullRuntime)
 	rsp, err := defaultKVC.Get(m.ctx, localPrefix, clientv3.WithPrefix())
@@ -271,6 +270,16 @@ func (m *Mjobs) failover(fullRuntime string) error {
 
 // 使用分布式锁
 func (m *Mjobs) assignMutex(oneTask kv, failover bool) {
+	state := model.State{}
+	if err := json.Unmarshal([]byte(oneTask.val), &state.State); err != nil {
+		m.Warn().Msgf("assignMutex.Unmarshal %s, val:%s\n", err, state.State)
+		return
+	}
+
+	if !state.IsCanRun() {
+		return
+	}
+
 	mutexName := model.AssignTaskMutex(oneTask.key)
 
 	s, _ := concurrency.NewSession(defautlClient)
@@ -292,9 +301,8 @@ func (m *Mjobs) assignMutex(oneTask kv, failover bool) {
 	m.assign(oneTask, failover)
 }
 
-// 分配任务的逻辑
-func (m *Mjobs) assign(oneTask kv, failover bool) {
-	m.Debug().Msgf("call assign, key:%s\n", oneTask.key)
+// 随机选择一个runtimeNode
+func (m *Mjobs) selectRuntimeNode() (string, error) {
 
 	var runtimeNodes []string
 	m.runtimeNode.Range(func(key, value any) bool {
@@ -304,10 +312,20 @@ func (m *Mjobs) assign(oneTask kv, failover bool) {
 
 	if len(runtimeNodes) == 0 {
 		m.Warn().Msgf("assign.runtimeNodes.size is 0\n")
-		return
+		return "", errors.New("assign.runtimeNodes.size is 0")
 	}
+	return utils.SliceRandOne(runtimeNodes), nil
+}
+
+// 分配任务的逻辑
+func (m *Mjobs) assign(oneTask kv, failover bool) {
+	m.Debug().Msgf("call assign, key:%s\n", oneTask.key)
 
 	kv := oneTask
+	runtimeNode, err := m.selectRuntimeNode()
+	if err != nil {
+		return
+	}
 	// 从状态信息里面获取tastName
 	taskName := model.TaskNameFromState(kv.key)
 	if taskName == "" {
@@ -323,20 +341,6 @@ func (m *Mjobs) assign(oneTask kv, failover bool) {
 		return
 	}
 
-	if len(rsp.Kvs) > 0 {
-		// 过滤正在运行中的任务
-		val := rsp.Kvs[0].Value
-		state, err := model.ValueToState(val)
-		if err != nil {
-			m.Error().Msgf("value to state%s\n", err)
-			return
-		}
-
-		if !state.IsCanRun() {
-			return
-		}
-	}
-
 	m.Debug().Msgf("assign, taskName %s\n", taskName)
 	rsp, err = defaultKVC.Get(m.ctx, model.FullGlobalTask(taskName))
 	if err != nil {
@@ -348,6 +352,7 @@ func (m *Mjobs) assign(oneTask kv, failover bool) {
 		m.Warn().Msgf("get %s value is nil\n", model.FullGlobalTask(taskName))
 		return
 	}
+
 	param := mParam{}
 	param.stateModRevision = kv.version
 	param.dataVersion = int(rsp.Kvs[0].Version)
@@ -357,7 +362,6 @@ func (m *Mjobs) assign(oneTask kv, failover bool) {
 		return
 	}
 
-	runtimeNode := utils.SliceRandOne(runtimeNodes)
 	if err = m.setTaskToLocalrunq(taskName, &param, runtimeNode, failover); err != nil {
 		m.Error().Msgf("set task to local runq fail:%s\n", err)
 		return
