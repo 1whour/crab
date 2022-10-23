@@ -11,18 +11,18 @@ function create_and_check() {
   fi
   ./scheduler start -f ./example/http.yaml -g $GATE_ADDR -t "$TASK_NAME"
 
-  sleep 1
+  sleep 1.5
   # -s 是global state task
-  result=`./scheduler etcd --get -s -t $TASK_NAME -e $ETCD_ADDR`
+  RESULT=`./scheduler etcd --get -s -t $TASK_NAME -e $ETCD_ADDR`
 
   # 输出执行的命令，方便debug
   echo "./scheduler etcd --get -s -t $TASK_NAME -e $ETCD_ADDR --debug"
 
-  check_have_result "$result" "create_and_check"
+  check_have_result "$RESULT" "create_and_check"
 }
 
 function delete_and_check() {
-  update_and_check_core $1 $2 $3
+  update_and_check_core "$1" "$2" "$3"
 }
 
 # 删除一个不存在的任务
@@ -42,6 +42,7 @@ function update_and_check_core() {
   if [[ -z "$ACTION" ]];then
     ACTION="rm"
   fi
+  echo "task_name($1), func_name($2) action($3)"
   # 生成task name
   
   ONLY="$4"
@@ -54,7 +55,7 @@ function update_and_check_core() {
   echo "./scheduler etcd --get -g -t $TASK_NAME -e $ETCD_ADDR"
 
   if [[ $ACTION = "rm" ]];then
-    check_empty_result "$result" $FUNC_NAME
+    check_empty_result "$RESULT" $FUNC_NAME
   else 
     # 如果是先创建任务，再update或者stop，应该有值
     if [[ -z $ONLY ]];then
@@ -112,7 +113,7 @@ function check_empty_result() {
 }
 
 create_and_check
-delete_and_check
+delete_and_check `uuidgen`
 update_and_check
 stop_and_check
 #create_and_delete_check
