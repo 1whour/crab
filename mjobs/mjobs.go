@@ -271,8 +271,8 @@ func (m *Mjobs) failover(fullRuntime string) error {
 // 使用分布式锁
 func (m *Mjobs) assignMutex(oneTask kv, failover bool) {
 	state := model.State{}
-	if err := json.Unmarshal([]byte(oneTask.val), &state.State); err != nil {
-		m.Warn().Msgf("assignMutex.Unmarshal %s, (val:%s)\n", err, state.State)
+	if err := json.Unmarshal([]byte(oneTask.val), &state); err != nil {
+		m.Warn().Msgf("assignMutex.Unmarshal %s, key(%s) val(%s)\n", err, oneTask.key, oneTask.val)
 		return
 	}
 
