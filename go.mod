@@ -3,12 +3,12 @@ module github.com/gnh123/scheduler
 go 1.19
 
 require (
+	github.com/antlabs/gstl v0.0.3
 	github.com/gin-gonic/gin v1.8.1
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/websocket v1.5.0
 	github.com/guonaihong/clop v0.2.7
 	github.com/guonaihong/gout v0.3.1
-	github.com/guonaihong/gstl v0.0.2
 	github.com/rs/zerolog v1.28.0
 	github.com/stretchr/testify v1.7.1
 	go.etcd.io/etcd/client/v3 v3.5.5

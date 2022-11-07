@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/antlabs/gstl/cmp"
+	"github.com/antlabs/gstl/mapex"
 	"github.com/gnh123/scheduler/executer"
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/slog"
 	"github.com/gnh123/scheduler/utils"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/guonaihong/gstl/cmp"
-	"github.com/guonaihong/gstl/mapex"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 

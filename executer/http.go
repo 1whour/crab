@@ -7,10 +7,10 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/antlabs/gstl/ifop"
 	"github.com/gnh123/scheduler/model"
 	"github.com/guonaihong/gout"
 	"github.com/guonaihong/gout/dataflow"
-	"github.com/guonaihong/gstl/ifop"
 )
 
 func init() {
