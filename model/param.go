@@ -4,13 +4,19 @@ import "time"
 
 type Param struct {
 	//api的版本号, 如果有不兼容的修改，直接修改这个字段就行
-	APIVersion string `yaml:"apiVersion" binding:"required" json:"api_version"`
+	APIVersion string  `yaml:"apiVersion" binding:"required" json:"api_version"`
+	Trigger    Trigger `yaml:"trigger" binding:"required" json:"trigger"`
 	//oneRuntime, broadcast
 	Kind string `yaml:"kind" json:"kind" binding:"required"`
 	//create, stop, rm, update, gate会修改这个字段，传递到runtime
 	Action   string        `yaml:"action" json:"action"`
 	Executer ExecuterParam `json:"executer" yaml:"executer"`
 	ExecTime time.Time     `json:"execTime" yaml:"execTime"`
+}
+
+// 任务的触发器
+type Trigger struct {
+	Cron string `yaml:"cron" json:"cron" binding:"required"`
 }
 
 func (p *Param) IsOneRuntime() bool {

@@ -83,6 +83,7 @@ func (r *Runtime) init() (err error) {
 		r.Error().Msg("etcd address is nil or endpoint is nil")
 		os.Exit(1)
 	}
+
 	// 设置日志
 	if len(r.EtcdAddr) > 0 {
 		if defautlClient, err = utils.NewEtcdClient(r.EtcdAddr); err != nil {
@@ -187,12 +188,17 @@ func (r *Runtime) createToExec(param *model.Param) error {
 	return nil
 }
 
-func (r *Runtime) runCrud(conn *websocket.Conn, param *model.Param) (err error) {
+func (r *Runtime) runCrudCmd(conn *websocket.Conn, param *model.Param) (err error) {
 
+	var tm cronex.TimerNoder
 	switch {
 	case param.IsCreate():
-		// 创建执行器
-		err = r.createToExec(param)
+		tm, err = r.cron.AddFunc(param.Trigger.Cron, func() {
+			// 创建执行器
+			err = r.createToExec(param)
+			// TODO 错误要上报到gate模块
+		})
+
 	case param.IsRemove(), param.IsStop():
 		// 删除和stop对于runtime是一样，停止当前运行的，然后从sync.Map删除
 		err = r.removeFromExec(param)
@@ -231,7 +237,7 @@ func (r *Runtime) readLoop(conn *websocket.Conn) error {
 		}
 
 		go func() {
-			if err := r.runCrud(conn, &param); err != nil {
+			if err := r.runCrudCmd(conn, &param); err != nil {
 				r.Error().Msgf("runtime.runCrud:%s\n", err)
 				//r.writeError(conn, r.WriteTimeout, 1, err.Error())
 				return
