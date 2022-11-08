@@ -3,6 +3,7 @@ module github.com/gnh123/scheduler
 go 1.19
 
 require (
+	github.com/antlabs/cronex v0.0.3
 	github.com/antlabs/gstl v0.0.3
 	github.com/gin-gonic/gin v1.8.1
 	github.com/google/uuid v1.1.2
@@ -17,7 +18,9 @@ require (
 )
 
 require (
+	github.com/antlabs/stl v0.0.1 // indirect
 	github.com/antlabs/strsim v0.0.2 // indirect
+	github.com/antlabs/timer v0.0.10 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.3-0.20220203105225-a9a7ef127534 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

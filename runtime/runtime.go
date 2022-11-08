@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/antlabs/cronex"
 	"github.com/antlabs/gstl/cmp"
 	"github.com/antlabs/gstl/mapex"
 	"github.com/gnh123/scheduler/executer"
@@ -30,6 +31,7 @@ var (
 // 2. 如果是外网模式，runtime只要写一个或者多个GateAddr, 做客户的负载均衡
 // 3. 可以执行http, shell, grpc任务
 type Runtime struct {
+	cron         *cronex.Cronex
 	EtcdAddr     []string      `clop:"short;long;greedy" usage:"etcd address"`
 	GateAddr     []string      `clop:"long" usage:"endpoint address"`
 	Level        string        `clop:"short;long" usage:"log level" default:"error"`
