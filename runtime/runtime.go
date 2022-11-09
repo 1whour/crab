@@ -10,7 +10,7 @@ import (
 
 	"github.com/antlabs/cronex"
 	"github.com/antlabs/gstl/cmp"
-	"github.com/antlabs/gstl/mapex"
+	"github.com/antlabs/gstl/rwmap"
 	"github.com/gnh123/scheduler/executer"
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/slog"
@@ -42,30 +42,15 @@ type Runtime struct {
 
 	muWc sync.Mutex //保护多个go程写同一个conn
 
-	exec sync.Map
-	sync.RWMutex
-	addrs map[string]string
+	//exec     sync.Map
+	cronFunc rwmap.RWMap[string, cronNode]
+	addrs    rwmap.RWMap[string, string]
 }
 
-// TODO 在gstl里面实现下给map套个sync.RWMutex的代码
-func (r *Runtime) storeAddr(key, value string) {
-	r.Lock()
-	r.addrs[key] = value
-	r.Unlock()
-}
-
-func (r *Runtime) deleteAddr(key string) {
-	r.Lock()
-	delete(r.addrs, key)
-	r.Unlock()
-}
-
-func (r *Runtime) keyAddr() []string {
-
-	r.RLock()
-	addrs := mapex.Keys(r.addrs)
-	r.RUnlock()
-	return addrs
+type cronNode struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	tm     cronex.TimerNoder
 }
 
 func (r *Runtime) init() (err error) {
@@ -75,7 +60,6 @@ func (r *Runtime) init() (err error) {
 		r.Name = uuid.New().String()
 	}
 
-	r.addrs = make(map[string]string)
 	r.ctx = context.TODO()
 	r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("runtime", r.Name)
 
@@ -97,12 +81,12 @@ func (r *Runtime) init() (err error) {
 
 		for _, kv := range rsp.Kvs {
 			// 从etcd里面获取gate ip
-			r.addrs[string(kv.Value)] = string(kv.Key)
+			r.addrs.Store(string(kv.Value), string(kv.Key))
 		}
 	}
 
 	for i, a := range r.GateAddr {
-		r.addrs[a] = fmt.Sprintf("endpoint index:%d", i)
+		r.addrs.Store(a, fmt.Sprintf("endpoint index:%d", i))
 	}
 
 	return nil
@@ -122,7 +106,7 @@ func (r *Runtime) watchGateNode() {
 
 	r.Debug().Msgf("runtime.watchGateNode:%v\n", rsp)
 	for _, ev := range rsp.Kvs {
-		r.storeAddr(string(ev.Value), string(ev.Key))
+		r.addrs.Store(string(ev.Value), string(ev.Key))
 	}
 
 	rev := rsp.Header.Revision + 1
@@ -132,15 +116,15 @@ func (r *Runtime) watchGateNode() {
 			switch {
 			case ev.IsCreate():
 				// 把新的gate地址加到当前addrs里面
-				r.storeAddr(string(ev.Kv.Value), string(ev.Kv.Key))
+				r.addrs.Store(string(ev.Kv.Value), string(ev.Kv.Key))
 				r.Debug().Msgf("create gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
 			case ev.IsModify():
 				// 更新addrs里面的状态
-				r.storeAddr(string(ev.Kv.Value), string(ev.Kv.Key))
+				r.addrs.Store(string(ev.Kv.Value), string(ev.Kv.Key))
 				r.Debug().Msgf("modify gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
 			case ev.Type == clientv3.EventTypeDelete:
 				// 把被删除的gate从当前addrs里面移除
-				r.deleteAddr(string(ev.Kv.Value))
+				r.addrs.Delete(string(ev.Kv.Value))
 				r.Debug().Msgf("delete gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
 			}
 		}
@@ -165,17 +149,16 @@ func (r *Runtime) writeError(conn *websocket.Conn, to time.Duration, code int, m
 }
 
 func (r *Runtime) removeFromExec(param *model.Param) error {
-	e, ok := r.exec.Load(param.Executer.TaskName)
+	e, ok := r.cronFunc.LoadAndDelete(param.Executer.TaskName)
 	if !ok {
 		return fmt.Errorf("not found taskName:%s", param.Executer.TaskName)
 	}
-	err := e.(executer.Executer).Stop()
-	r.exec.Delete(param.Executer.TaskName)
-	return err
+	e.cancel()
+	return nil
 }
 
-func (r *Runtime) createToExec(param *model.Param) error {
-	e, err := executer.CreateExecuter(r.ctx, param)
+func (r *Runtime) createToExec(ctx context.Context, param *model.Param) error {
+	e, err := executer.CreateExecuter(ctx, param)
 	if err != nil {
 		r.Error().Msgf("param.TaskName(%s) create fail:%s\n", param.Executer.TaskName, err)
 		return err
@@ -184,20 +167,32 @@ func (r *Runtime) createToExec(param *model.Param) error {
 	if err := e.Run(); err != nil {
 		return err
 	}
-	r.exec.Store(param.Executer.TaskName, e)
+	return nil
+}
+
+func (r *Runtime) createCron(param *model.Param) (err error) {
+
+	ctx, cancel := context.WithCancel(r.ctx)
+	tm, err := r.cron.AddFunc(param.Trigger.Cron, func() {
+		// 创建执行器
+		err = r.createToExec(ctx, param)
+		// TODO 错误要上报到gate模块
+	})
+
+	if err != nil {
+		cancel()
+		return err
+	}
+
+	r.cronFunc.Store(param.Executer.TaskName, cronNode{ctx: ctx, cancel: cancel, tm: tm})
 	return nil
 }
 
 func (r *Runtime) runCrudCmd(conn *websocket.Conn, param *model.Param) (err error) {
 
-	var tm cronex.TimerNoder
 	switch {
 	case param.IsCreate():
-		tm, err = r.cron.AddFunc(param.Trigger.Cron, func() {
-			// 创建执行器
-			err = r.createToExec(param)
-			// TODO 错误要上报到gate模块
-		})
+		r.createCron(param)
 
 	case param.IsRemove(), param.IsStop():
 		// 删除和stop对于runtime是一样，停止当前运行的，然后从sync.Map删除
@@ -207,7 +202,7 @@ func (r *Runtime) runCrudCmd(conn *websocket.Conn, param *model.Param) (err erro
 		if err = r.removeFromExec(param); err != nil {
 			return err
 		}
-		err = r.createToExec(param)
+		err = r.createCron(param)
 	}
 	return err
 }
@@ -297,7 +292,7 @@ func (r *Runtime) createConnRand() {
 
 	for {
 
-		addrs := r.keyAddr()
+		addrs := r.addrs.Keys()
 		if len(addrs) == 0 {
 			r.Info().Msgf("no gate address available\n")
 			t.sleep()
