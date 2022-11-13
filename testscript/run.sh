@@ -3,15 +3,18 @@
 # 配置地址
 GATE_ADDR="192.168.31.147:1025"
 ETCD_ADDR="127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379"
-MOCK_ADDR="127.0.0.1:8181"
+MOCK_ADDR="http://127.0.0.1:8181"
 
+source "./testscript/assert.sh"
 # 创建任务，state应该是running
 function create_and_check() {
   TASK_NAME="$1"
   if [[ -z "$TASK_NAME" ]];then
     TASK_NAME=`uuidgen`
   fi
-  ./scheduler start -f ./example/http.yaml -g $GATE_ADDR -t "$TASK_NAME"
+  CMD="./scheduler start -f ./example/http.yaml -g $GATE_ADDR -t $TASK_NAME"
+  echo $CMD
+  `$CMD`
 
   sleep 1
   # -s 是global state task
@@ -85,10 +88,11 @@ function create_and_stop_check() {
 }
 
 # 先创建再更新
-function create_and_update_check() {
+function create_and_update_stop_check() {
   TASK_NAME=`uuidgen`
   create_and_check $TASK_NAME
-  update_and_check_core $TASK_NAME "create_and_update_check" "update"
+  update_and_check_core $TASK_NAME "create_and_update_stop_check" "update"
+  update_and_check_core $TASK_NAME "create_and_update_stop_check" "stop"
 }
 
 # 对一个不存在的任务更新，应该报错
@@ -122,22 +126,31 @@ function check_empty_result() {
   fi
 }
 
-# 检查任务是否运行中
-function check_task_running() {
-
+# 检查任务是运行的次数是否满足预期
+function create_and_check_running_count() {
+  TASK_NAME=`uuidgen`
+  create_and_check $TASK_NAME
+  sleep 3
+  # 获取运行的次数
+  CMD="curl -s -X GET -H scheduler-http-executer:$TASK_NAME $MOCK_ADDR/task"
+  echo $CMD
+  NUM=`$CMD`
+  assert_ge $NUM 2 "任务执行次数太少 $NUM"
+  assert_le $NUM 4 "任务执行次数太多 $NUM"
+  update_and_check_core $TASK_NAME "create_and_stop_check" "stop"
 }
+
+# 测试任务是否能正确执行
+create_and_check_running_count
 
 # 先创建，再更新
 create_and_stop_check
-
+ 
 # 先创建，再删除。
 create_and_delete_check
-
-# 先创建，再更新
-create_and_update_check
-
-# 只创建，状态应该是running
-create_and_check
+ 
+# # 先创建，再更新
+create_and_update_stop_check
 
 # 删除一个不存在的任务，etcd里面数据应该是空的
 delete_and_check `uuidgen`
@@ -148,4 +161,3 @@ only_update_and_check
 # stop一个不存在的任务，etcd里面的数据应该是空的
 only_stop_and_check
 
-# 测试任务是否能正确执行

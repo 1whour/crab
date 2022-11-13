@@ -90,6 +90,7 @@ func (r *Runtime) init() (err error) {
 		r.addrs.Store(a, fmt.Sprintf("endpoint index:%d", i))
 	}
 
+	r.cron.Start()
 	return nil
 }
 
@@ -155,6 +156,7 @@ func (r *Runtime) removeFromExec(param *model.Param) error {
 		return fmt.Errorf("not found taskName:%s", param.Executer.TaskName)
 	}
 	e.cancel()
+	e.tm.Stop()
 	return nil
 }
 

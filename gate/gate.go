@@ -268,6 +268,7 @@ func (r *Gate) createTask(c *gin.Context) {
 		return
 	}
 
+	r.Debug().Msgf("start create \n")
 	// 创建数据队列
 	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
 	// 创建状态队列
