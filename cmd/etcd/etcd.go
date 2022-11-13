@@ -12,10 +12,10 @@ import (
 // 本子命令主要是为了测试脚本而写
 
 type Etcd struct {
-	GlobalTask bool `clop:"short;long" usage:"global task"`
-	StateTask  bool `clop:"short;long" usage:"global state task"`
+	GlobalTask bool `clop:"short;long" usage:"global task"`       //取全局任务
+	StateTask  bool `clop:"short;long" usage:"global state task"` //取本地任务
 
-	EtcdAddr []string `clop:"short;long;greedy" usage:"etcd address" valid:"required"`
+	EtcdAddr []string `clop:"short;long;greedy" usage:"etcd address" valid:"required"` //etcd的地址
 	TaskName string   `clop:"short;long" usage:"task name" valid:"required"`
 	Get      bool     `clop:"long" usage:"get etcd value"`
 	Debug    bool     `clop:"long" usage:"debug mode"`

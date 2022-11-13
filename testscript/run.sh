@@ -1,7 +1,9 @@
 #!/bin/bash
 
+# 配置地址
 GATE_ADDR="192.168.31.147:1025"
 ETCD_ADDR="127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379"
+MOCK_ADDR="127.0.0.1:8181"
 
 # 创建任务，state应该是running
 function create_and_check() {
@@ -120,6 +122,11 @@ function check_empty_result() {
   fi
 }
 
+# 检查任务是否运行中
+function check_task_running() {
+
+}
+
 # 先创建，再更新
 create_and_stop_check
 
@@ -141,3 +148,4 @@ only_update_and_check
 # stop一个不存在的任务，etcd里面的数据应该是空的
 only_stop_and_check
 
+# 测试任务是否能正确执行

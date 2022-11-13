@@ -60,6 +60,7 @@ func (r *Runtime) init() (err error) {
 		r.Name = uuid.New().String()
 	}
 
+	r.cron = cronex.New()
 	r.ctx = context.TODO()
 	r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("runtime", r.Name)
 
@@ -176,6 +177,9 @@ func (r *Runtime) createCron(param *model.Param) (err error) {
 	tm, err := r.cron.AddFunc(param.Trigger.Cron, func() {
 		// 创建执行器
 		err = r.createToExec(ctx, param)
+		if err != nil {
+			r.Error().Msgf("createToExec %s\n", err)
+		}
 		// TODO 错误要上报到gate模块
 	})
 

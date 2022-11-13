@@ -39,16 +39,19 @@ func (h *httpExecuter) Run() error {
 		for i := 0; i < len(querys); i++ {
 			q = append(q, querys[i].Name, querys[i].Value)
 		}
+		q = append(q, "")
 		h.req.SetQuery(q)
 	}
 
 	// http header
 	if len(httpData.Headers) > 0 {
-		h2 := make([]string, 0, len(httpData.Headers))
+		h2 := make([]string, 0, len(httpData.Headers)+1)
 		headers := httpData.Headers
 		for i := 0; i < len(headers); i++ {
 			h2 = append(h2, headers[i].Name, headers[i].Value)
 		}
+		// 自带一个TaskName
+		h2 = append(h2, model.DefaultExecuterHTTPKey, h.param.TaskName)
 		h.req.SetHeader(h2)
 	}
 

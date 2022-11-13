@@ -1,12 +1,15 @@
 apiVersion: v0.0.1 #api版本号
 kind: oneRuntime #只在一个runtime上运行
+trigger:
+  cron: "* * * * * *"
 executer:
   taskName: first-task
   http:
     method: post
     scheme: http
     host: 127.0.0.1
-    port: 8080
+    port: 8181
+    path: "/task"
     headers:
     - name: Bid
       value: xxxx
