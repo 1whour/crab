@@ -12,7 +12,12 @@ function create_and_check() {
   if [[ -z "$TASK_NAME" ]];then
     TASK_NAME=`uuidgen`
   fi
-  CMD="./scheduler start -f ./example/http.yaml -g $GATE_ADDR -t $TASK_NAME"
+  FILE_NAME="$2"
+  if [[ -z "$FILE_NAME" ]];then
+    FILE_NAME="./example/http.yaml"
+  fi
+
+  CMD="./scheduler start -f $FILE_NAME -g $GATE_ADDR -t $TASK_NAME"
   echo $CMD
   `$CMD`
 
@@ -133,31 +138,67 @@ function create_and_check_running_count() {
   sleep 3
   # 获取运行的次数
   CMD="curl -s -X GET -H scheduler-http-executer:$TASK_NAME $MOCK_ADDR/task"
+  # 打印命令，方便debug用的
   echo $CMD
+  #运行命令
   NUM=`$CMD`
   assert_ge $NUM 2 "任务执行次数太少 $NUM"
   assert_le $NUM 4 "任务执行次数太多 $NUM"
   update_and_check_core $TASK_NAME "create_and_stop_check" "stop"
 }
 
-# 测试任务是否能正确执行
-create_and_check_running_count
+# 检查故障转移功能
+# 集群一开始启动两个gate, 关闭有任务在运行的gate
+function failover() {
+  echo ""
+}
 
-# 先创建，再更新
-create_and_stop_check
- 
-# 先创建，再删除。
-create_and_delete_check
- 
-# # 先创建，再更新
-create_and_update_stop_check
+# 集群被重启了
+# 需要做任务的自动恢复
+function restart_cluster_resume_task() {
+  echo ""
+}
 
-# 删除一个不存在的任务，etcd里面数据应该是空的
-delete_and_check `uuidgen`
+# 测试shell任务
+create_and_check_shell_count() {
+  TASK_NAME=`uuidgen`
+  cp ./example/shell.yaml ./example/tmp_shell.yaml
+  sed -i '' "s/TEMPLATE_VALUE/$TASK_NAME/" ./example/tmp_shell.yaml 
+  create_and_check $TASK_NAME "./example/tmp_shell.yaml"
+  sleep 3
+  # 获取运行的次数
+  CMD="curl -s -X GET -H scheduler-http-executer:$TASK_NAME $MOCK_ADDR/task"
+  # 打印命令，方便debug用的
+  echo $CMD
+  #运行命令
+  NUM=`$CMD`
+  assert_ge $NUM 2 "任务执行次数太少 $NUM"
+  assert_le $NUM 4 "任务执行次数太多 $NUM"
+  update_and_check_core $TASK_NAME "create_and_stop_shell_check" "stop"
 
-# 更新一个不存在的任务，etcd里面数据应该是空的
-only_update_and_check
+}
 
-# stop一个不存在的任务，etcd里面的数据应该是空的
-only_stop_and_check
+# 测试shell任务
+create_and_check_shell_count
 
+## 测试任务是否能正确执行
+#create_and_check_running_count
+#
+## 先创建，再更新
+#create_and_stop_check
+# 
+## 先创建，再删除。
+#create_and_delete_check
+# 
+## # 先创建，再更新
+#create_and_update_stop_check
+#
+## 删除一个不存在的任务，etcd里面数据应该是空的
+#delete_and_check `uuidgen`
+#
+## 更新一个不存在的任务，etcd里面数据应该是空的
+#only_update_and_check
+#
+## stop一个不存在的任务，etcd里面的数据应该是空的
+#only_stop_and_check
+#

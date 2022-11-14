@@ -14,9 +14,12 @@ scheduler是分布式调度框架，主要功能定时，延时，lambda等功�
 ## 架构图
 
 ## 快速开始
+### 一、http任务配置
 ```yaml
 apiVersion: v0.0.1 #api版本号
 kind: oneRuntime #只在一个runtime上运行
+trigger:
+  cron: "* * * * * *"
 executer:
   taskName: first-task
   http:
@@ -47,4 +50,18 @@ executer:
 ### 4. 更新任务
 ```bash
 ./scheduler update -f ./example/http.yaml -g gate_addr
+```
+
+### 二、shell任务配置
+```yaml
+apiVersion: v0.0.1
+kind: oneRuntime
+trigger:
+  cron: "* * * * * *" #每秒触发一次
+executer:
+  shell:
+    commond: curl -X POST 127.0.0.1:8181/task #command和args的作用是等价的，唯一的区别是命令放在一个字符串或者slice里面。
+    #args:
+    #- echo
+    #- "hello"
 ```

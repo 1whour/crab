@@ -24,6 +24,10 @@ func (s *shellExecuter) Run() error {
 }
 
 func createShellExecuter(ctx context.Context, param *model.Param) Executer {
+	if param.Executer.Shell == nil {
+		return nil
+	}
+
 	s := &shellExecuter{}
 
 	shellParam := param.Executer.Shell
