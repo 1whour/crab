@@ -60,7 +60,10 @@ type Update struct {
 
 // 更新子命令入口
 func (u *Update) SubMain() {
-	u.Crud(u.GateAddr[0]+model.TASK_UPDATE_URL, http.MethodPut)
+	if err := u.Crud(u.GateAddr[0]+model.TASK_UPDATE_URL, http.MethodPut); err != nil {
+		// 出错进程退出为非0值
+		os.Exit(1)
+	}
 }
 
 // fileName是需要打开的文件名

@@ -6,11 +6,8 @@ build:
 build-race:
 	go build -race ./cmd/scheduler/scheduler.go
 
-test:
+test.shell:
 	bash ./testscript/run.sh
-
-test.create:
-	bash ./testscript/run.sh create
-
-test.delete:
-	bash ./testscript/run.sh delete
+test:
+	go test ./...
+	bash ./testscript/run.sh

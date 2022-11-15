@@ -60,7 +60,7 @@ trigger:
   cron: "* * * * * *" #每秒触发一次
 executer:
   shell:
-    commond: curl -X POST 127.0.0.1:8181/task #command和args的作用是等价的，唯一的区别是命令放在一个字符串或者slice里面。
+    command: curl -X POST 127.0.0.1:8181/task #command和args的作用是等价的，唯一的区别是命令放在一个字符串或者slice里面。
     #args:
     #- echo
     #- "hello"

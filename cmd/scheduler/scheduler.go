@@ -4,6 +4,7 @@ import (
 	"github.com/gnh123/scheduler/cmd/clicrud"
 	"github.com/gnh123/scheduler/cmd/etcd"
 	"github.com/gnh123/scheduler/cmd/mocksrv"
+	"github.com/gnh123/scheduler/cmd/status"
 	"github.com/gnh123/scheduler/gate"
 	"github.com/gnh123/scheduler/mjobs"
 	"github.com/gnh123/scheduler/runtime"
@@ -29,6 +30,8 @@ type scheduler struct {
 	etcd.Etcd `clop:"subcommand" usage:"etcd"`
 	// mocksrv子命令， 主要用于自测
 	mocksrv.MockSrv `clop:"subcommand" usage:"mock server"`
+	// 查看任务状态
+	status.Status `clop:"subcommand" usage:"status"`
 }
 
 func main() {

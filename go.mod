@@ -10,6 +10,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/guonaihong/clop v0.2.7
 	github.com/guonaihong/gout v0.3.1
+	github.com/olekukonko/tablewriter v0.0.5
 	github.com/rs/zerolog v1.28.0
 	github.com/stretchr/testify v1.7.1
 	go.etcd.io/etcd/client/v3 v3.5.5
@@ -35,6 +36,7 @@ require (
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect

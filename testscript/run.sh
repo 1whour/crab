@@ -6,8 +6,13 @@ ETCD_ADDR="127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379"
 MOCK_ADDR="http://127.0.0.1:8181"
 
 source "./testscript/assert.sh"
+function update_gate_addr() {
+  GATE_ADDR=`etcdctl get --prefix /scheduler/v1/node/gate/ --print-value-only|head -1|tr -d '\n'`
+}
 # 创建任务，state应该是running
 function create_and_check() {
+  update_gate_addr
+
   TASK_NAME="$1"
   if [[ -z "$TASK_NAME" ]];then
     TASK_NAME=`uuidgen`
@@ -20,8 +25,9 @@ function create_and_check() {
   CMD="./scheduler start -f $FILE_NAME -g $GATE_ADDR -t $TASK_NAME"
   echo $CMD
   `$CMD`
+  assert_eq $? 0 "更新失败"
 
-  sleep 1
+  sleep 1.5
   # -s 是global state task
   RESULT=`./scheduler etcd --get -s -t $TASK_NAME -e $ETCD_ADDR`
 
@@ -37,6 +43,8 @@ function delete_and_check() {
 
 # 删除一个不存在的任务
 function update_and_check_core() {
+
+  update_gate_addr
 
   TASK_NAME="$1"
   if [[ -z "$TASK_NAME" ]];then
@@ -149,7 +157,38 @@ function create_and_check_running_count() {
 
 # 检查故障转移功能
 # 集群一开始启动两个gate, 关闭有任务在运行的gate
-function failover() {
+function failover_gate() {
+  # 默认会起两个gate节点，先关闭gate1，那任务肯定会跑在gate2上面
+  goreman run stop scheduler.gate1
+  TASK_NAME=`uuidgen`
+
+  # 运行任务
+  create_and_check $TASK_NAME
+
+  # 恢复gate1节点
+  goreman run start scheduler.gate1
+  # 关闭gate2节点
+  goreman run stop scheduler.gate2
+
+  # 检查运行次数是否满足预期
+  sleep 3
+  # 获取运行的次数
+  CMD="curl -s -X GET -H scheduler-http-executer:$TASK_NAME $MOCK_ADDR/task"
+  # 打印命令，方便debug用的
+  echo $CMD
+  #运行命令
+  NUM=`$CMD`
+  assert_ge $NUM 2 "任务执行次数太少 $NUM"
+  assert_le $NUM 4 "任务执行次数太多 $NUM"
+  update_and_check_core $TASK_NAME "failover_gate_stop" "stop"
+
+  # 恢复gate2节点
+  goreman run start scheduler.gate2
+}
+
+# 检查故障转移功能
+# 集群一开始启动两个runtime, 关闭一个有任务的runtime
+function failover_runtime() {
   echo ""
 }
 
@@ -178,8 +217,11 @@ create_and_check_shell_count() {
 
 }
 
-# 测试shell任务
-create_and_check_shell_count
+# 测试gate被重启是否能恢复任务
+failover_gate
+
+## 测试shell任务
+#create_and_check_shell_count
 
 ## 测试任务是否能正确执行
 #create_and_check_running_count
