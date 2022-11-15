@@ -72,48 +72,6 @@ func newKv(key string, value string, version int) kv {
 	return kv{key: key, val: value, version: version}
 }
 
-func (m *Mjobs) watchGlobalTaskState() {
-	// 先获取节点状态
-	rsp, err := defaultKVC.Get(m.ctx, model.GlobalTaskPrefixState, clientv3.WithPrefix(), clientv3.WithFilterDelete())
-	if err == nil {
-		for _, ev := range rsp.Kvs {
-			key := string(ev.Key)
-			value := string(ev.Value)
-
-			state, err := model.ValueToState(ev.Value)
-			if err != nil {
-				m.Error().Msgf("watchGlobalTaskState, value to state %s\n", err)
-				continue
-			}
-
-			if state.IsCanRun() {
-				go m.assignMutex(newKv(key, value, int(rsp.Header.Revision)), false)
-			}
-		}
-	}
-
-	rev := rsp.Header.Revision + 1
-	readGlobal := defautlClient.Watch(m.ctx, model.GlobalTaskPrefixState, clientv3.WithPrefix(), clientv3.WithRev(rev))
-	for ersp := range readGlobal {
-		for _, ev := range ersp.Events {
-			key := string(ev.Kv.Key)
-			value := string(ev.Kv.Value)
-
-			m.Debug().Msgf("watch create(%t) update(%t) delete(%t) global task:%s, state:%s, version:%d\n",
-				ev.IsCreate(), ev.IsModify(), ev.Type == clientv3.EventTypeDelete,
-				ev.Kv.Key, ev.Kv.Value,
-				ev.Kv.Version)
-
-			switch {
-			case ev.IsCreate(), ev.IsModify():
-
-				go m.assignMutex(newKv(key, value, int(ev.Kv.ModRevision)), false)
-			case ev.Type == clientv3.EventTypeDelete:
-			}
-		}
-	}
-}
-
 var createOneTask = func() []kv {
 	return make([]kv, 0, 100)
 }
@@ -157,7 +115,7 @@ func (m *Mjobs) oneRuntime(taskName string, param *mParam, runtimeNode string, f
 		return
 	}
 
-	// 生成本地队列的名字
+	// 生成本地队列的名字, 包含runtime和taskName
 	ltaskPath := model.RuntimeNodeToLocalTask(runtimeNode, taskName)
 	// 向本地队列写入任务
 	if _, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun); err != nil {
@@ -200,46 +158,50 @@ func (m *Mjobs) broadcast(taskName string, param *mParam) (err error) {
 	return err
 }
 
-// watch runtime node的变化, 把node信息同步到内存里面
-func (m *Mjobs) watchRuntimeNode() {
-	// 先一次性获取当前节点
-	rsp, err := defaultKVC.Get(m.ctx, model.RuntimeNodePrefix, clientv3.WithPrefix())
-	if err == nil {
-		for _, e := range rsp.Kvs {
-			key := string(e.Key)
-			val := string(e.Value)
-			m.runtimeNode.Store(key, val)
-		}
-	}
+// 检查全局队列中的死任务Running状态的，重新加载到runtime里面
+// 单机任务随机找个节点执行
+// 广播任务, 只广播到当前的所有的节点
+func (m *Mjobs) restartRunning() {
 
-	rev := rsp.Header.Revision + 1
-	// watch节点后续变化
-	runtimeNode := defautlClient.Watch(m.ctx, model.RuntimeNodePrefix, clientv3.WithPrefix(), clientv3.WithRev(rev))
-	for ersp := range runtimeNode {
-		for _, ev := range ersp.Events {
-			m.Debug().Msgf("mjobs.runtimeNodes key(%s) value(%s) create(%t), update(%t), delete(%t)\n",
-				string(ev.Kv.Key), string(ev.Kv.Value), ev.IsCreate(), ev.IsModify(), ev.Type == clientv3.EventTypeDelete)
-			switch {
-			case ev.IsCreate():
-				m.runtimeNode.Store(string(ev.Kv.Key), string(ev.Kv.Value))
-				// 在当前内存中
-			case ev.IsModify():
-				// 这里不应该发生
-			case ev.Type == clientv3.EventTypeDelete:
-				// 被删除
-				go func() {
-					if err := m.failover(string(ev.Kv.Key)); err != nil {
-						m.Warn().Msgf("Is this key() modified??? Not expected\n", string(ev.Kv.Key))
+	for {
+		// 先获取任务的前缀
+		rsp, err := defaultKVC.Get(m.ctx, model.GlobalTaskPrefixState, clientv3.WithPrefix())
+		if err != nil {
+			m.Error().Msgf("restartRunning, get state prefix:%v\n", err)
+			continue
+		}
+
+		// 遍历所有的全局任务
+		for _, kv := range rsp.Kvs {
+			state, err := model.ValueToState(kv.Value)
+			if err != nil {
+				m.Error().Msgf("restartRunning: value to state:%v\n", err)
+				continue
+			}
+
+			if state.IsRunning() {
+				ip, err := defaultKVC.Get(m.ctx, state.RuntimeNode)
+				if err != nil {
+					m.Error().Msgf("restartRunning: get ip %v\n", err)
+					continue
+				}
+
+				if len(ip.Kvs) == 0 {
+					fullGlobalTask := string(kv.Key)
+					taskName := model.TaskNameFromGlobalTask(fullGlobalTask)
+					ltaskPath := model.RuntimeNodeToLocalTask(fullGlobalTask, taskName)
+					_, err := defaultKVC.Delete(m.ctx, ltaskPath)
+					if err != nil {
+						m.Error().Msgf("restartRunning, %v\n", err)
+						continue
 					}
-				}()
-				m.runtimeNode.Delete(string(ev.Kv.Key))
+				}
 			}
 		}
-	}
-}
 
-// 检查全局队列中的死任务，重新加载到内存中
-func (m *Mjobs) restart() {
+		// 3s检查一次
+		time.Sleep(time.Second * 3)
+	}
 
 }
 

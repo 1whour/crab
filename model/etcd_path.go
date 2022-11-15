@@ -28,6 +28,7 @@ var (
 	AssignTaskMutexPrefix = "/scheduler/v1/task/assign/mutex"
 )
 
+// 加锁需调用该函数，生成唯一的锁key
 func AssignTaskMutex(fullPath string) string {
 	taskName := TaskNameFromState(fullPath)
 	return fmt.Sprintf("%s/%s", AssignTaskMutexPrefix, taskName)
@@ -43,7 +44,7 @@ func fullLocalRuntimeTask(runtimeName, taskName string) string {
 	return fmt.Sprintf("%s/%s/%s", LocalRuntimeTaskPrefix, runtimeName, taskName)
 }
 
-// runtimeNode转成本地队列
+// runtimeNode转成本地队列前缀 路径
 func RuntimeNodeToLocalTaskPrefix(fullRuntimeName string) string {
 	runtimeName := takeNameFromPath(fullRuntimeName)
 	return WatchLocalRuntimePrefix(runtimeName)
@@ -74,6 +75,11 @@ func FullGlobalTaskState(taskName string) string {
 
 // 从状态队列提取taskName
 func TaskNameFromState(fullPath string) string {
+	return takeNameFromPath(fullPath)
+}
+
+// 从状态队列提取taskName
+func TaskNameFromGlobalTask(fullPath string) string {
 	return takeNameFromPath(fullPath)
 }
 

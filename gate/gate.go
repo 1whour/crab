@@ -372,7 +372,7 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 	rspStateModRevision := rspState.Kvs[0].ModRevision
 	r.Debug().Msgf("get version:%v, ModRevision:%v\n", rsp.Kvs[0].Version, rspModRevision)
 
-	newValue, err := model.OnlyUpdateState(rspState.Kvs[0].Value, model.CanRun)
+	newValue, err := model.OnlyUpdateState(rspState.Kvs[0].Value, model.CanRunJSON)
 	if err != nil {
 		r.error(c, 500, "updateTask, onlyUpdateState(CanRun) err :%v", err)
 		return
@@ -402,7 +402,7 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 }
 
 // 构造status数据
-// 内部使用接口， 直接返回祼数据
+// 内部使用接口， 直接返回格式化后的数据
 // 标题如下
 // taskName, status, runtimeNode, runtimeIP
 
