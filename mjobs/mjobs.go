@@ -170,9 +170,11 @@ func (m *Mjobs) assignMutexWithCb(oneTask KeyVal, failover bool, cb func()) {
 		return
 	}
 
-	if !state.IsCanRun() {
-		return
-	}
+	/*
+		if !state.IsCanRun() {
+			return
+		}
+	*/
 
 	mutexName := model.AssignTaskMutex(oneTask.key)
 
@@ -264,6 +266,7 @@ func (m *Mjobs) SubMain() {
 		return
 	}
 
+	go m.restartRunning()
 	go m.watchRuntimeNode()
 	m.watchGlobalTaskState()
 }
