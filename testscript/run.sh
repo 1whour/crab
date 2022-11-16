@@ -222,28 +222,28 @@ create_and_check_shell_count() {
 # 先创建，再更新
 create_and_stop_check
 
-## 测试gate被重启是否能恢复任务
-##failover_gate
-#
-## 测试shell任务
-#create_and_check_shell_count
-#
-## 测试任务是否能正确执行
-#create_and_check_running_count
-#
-# 
-## 先创建，再删除。
-#create_and_delete_check
-# 
-## # 先创建，再更新
-#create_and_update_stop_check
-#
-## 删除一个不存在的任务，etcd里面数据应该是空的
-#delete_and_check `uuidgen`
-#
-## 更新一个不存在的任务，etcd里面数据应该是空的
-#only_update_and_check
-#
-## stop一个不存在的任务，etcd里面的数据应该是空的
-#only_stop_and_check
-#
+# 测试gate被重启是否能恢复任务
+#failover_gate
+
+# 测试shell任务
+create_and_check_shell_count
+
+# 测试任务是否能正确执行
+create_and_check_running_count
+
+ 
+# 先创建，再删除。
+create_and_delete_check
+ 
+# # 先创建，再更新
+create_and_update_stop_check
+
+# 删除一个不存在的任务，etcd里面数据应该是空的
+delete_and_check `uuidgen`
+
+# 更新一个不存在的任务，etcd里面数据应该是空的
+only_update_and_check
+
+# stop一个不存在的任务，etcd里面的数据应该是空的
+only_stop_and_check
+

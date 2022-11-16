@@ -40,7 +40,7 @@ func (m *Mjobs) watchGlobalTaskState() {
 	for ersp := range readGlobal {
 		for _, ev := range ersp.Events {
 			key := string(ev.Kv.Key)
-			version := ev.Kv.Version
+			version := ev.Kv.ModRevision
 
 			m.Debug().Msgf("watch create(%t) update(%t) delete(%t) global task:%s, state:%s, version:%d\n",
 				ev.IsCreate(), ev.IsModify(), ev.Type == clientv3.EventTypeDelete,
