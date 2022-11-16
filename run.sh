@@ -1,9 +1,0 @@
-./scheduler rm -f ./example/http.yaml -g 192.168.31.147:1024 -t 8aa1d99e-9449-4f22-a41b-e17e260c6479
-./scheduler rm -f ./example/http.yaml -g 192.168.31.147:1024 -t 8aa1d99e-9449-4f22-a41b-e17e260c6479
-./scheduler rm -f ./example/http.yaml -g 192.168.31.147:1024 -t f9c16a5d-9122-443d-aa25-da0377dc7512
-./scheduler rm -f ./example/http.yaml -g 192.168.31.147:1024 -t 8aa1d99e-9449-4f22-a41b-e17e260c6479
-./scheduler rm -f ./example/http.yaml -g 192.168.31.147:1024 -t f9c16a5d-9122-443d-aa25-da0377dc7512
-./scheduler rm -f ./example/http.yaml -g 192.168.31.147:1024 -t 8aa1d99e-9449-4f22-a41b-e17e260c6479
-./scheduler rm -f ./example/http.yaml -g 192.168.31.147:1024 -t ba16e819-ff83-440d-b6e4-a94d3b68c62e
-./scheduler rm -f ./example/http.yaml -g 192.168.31.147:1024 -t f9c16a5d-9122-443d-aa25-da0377dc7512
-./scheduler rm -f ./example/http.yaml -g 192.168.31.147:1024 -t 8aa1d99e-9449-4f22-a41b-e17e260c6479
