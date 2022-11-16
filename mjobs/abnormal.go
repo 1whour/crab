@@ -53,6 +53,7 @@ func (m *Mjobs) restartRunning() {
 				continue
 			}
 
+			// TODO state.IsCanRun(), 这个状态是否能加入异常恢复
 			if state.IsRunning() {
 				ip, err := defaultKVC.Get(m.ctx, state.RuntimeNode)
 				if err != nil {
@@ -61,13 +62,19 @@ func (m *Mjobs) restartRunning() {
 				}
 
 				if len(ip.Kvs) == 0 {
+					m.Debug().Msgf("restartRunning, get runtimeNode.size:%d, need fix %s\n", len(ip.Kvs), kv.Key)
 
 					fullGlobalTask := string(kv.Key)
 					taskName := model.TaskNameFromGlobalTask(fullGlobalTask)
 					ltaskPath := model.RuntimeNodeToLocalTask(fullGlobalTask, taskName)
 
 					var err error
-					m.assignMutexWithCb(KeyVal{key: string(kv.Key), val: string(kv.Value), version: int(kv.ModRevision)}, true, func() {
+					oneTask := KeyVal{key: string(kv.Key),
+						val:     string(kv.Value),
+						version: int(kv.ModRevision),
+						state:   state,
+					}
+					m.assignMutexWithCb(oneTask, true, func() {
 
 						_, err = defaultKVC.Delete(m.ctx, ltaskPath)
 					})

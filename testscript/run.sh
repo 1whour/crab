@@ -23,7 +23,7 @@ function create_and_check() {
   fi
 
   CMD="./scheduler start -f $FILE_NAME -g $GATE_ADDR -t $TASK_NAME"
-  echo $CMD
+  echo "($CMD)"
   `$CMD`
   assert_eq $? 0 "更新失败"
 
@@ -64,7 +64,9 @@ function update_and_check_core() {
   # 生成task name
   
   ONLY="$4"
-  ./scheduler $ACTION -f ./example/http.yaml -g $GATE_ADDR -t "$TASK_NAME"
+  CMD="./scheduler $ACTION -f ./example/http.yaml -g $GATE_ADDR -t $TASK_NAME"
+  echo $CMD
+  `$CMD`
 
   sleep 1
   # 查询全局队列是否有值
@@ -150,8 +152,8 @@ function create_and_check_running_count() {
   echo $CMD
   #运行命令
   NUM=`$CMD`
-  assert_ge $NUM 2 "任务执行次数太少 $NUM"
-  assert_le $NUM 4 "任务执行次数太多 $NUM"
+  assert_ge $NUM 2 "create_and_check_running_count 任务执行次数太少 $NUM"
+  assert_le $NUM 4 "create_and_check_running_coount 任务执行次数太多 $NUM"
   update_and_check_core $TASK_NAME "create_and_stop_check" "stop"
 }
 
@@ -217,17 +219,18 @@ create_and_check_shell_count() {
 
 }
 
-# 测试gate被重启是否能恢复任务
-failover_gate
+# 先创建，再更新
+create_and_stop_check
 
+## 测试gate被重启是否能恢复任务
+##failover_gate
+#
 ## 测试shell任务
 #create_and_check_shell_count
-
+#
 ## 测试任务是否能正确执行
 #create_and_check_running_count
 #
-## 先创建，再更新
-#create_and_stop_check
 # 
 ## 先创建，再删除。
 #create_and_delete_check

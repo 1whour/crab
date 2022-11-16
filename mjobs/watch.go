@@ -5,6 +5,24 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
+func (m *Mjobs) todoCallTask(key string, value []byte, version int) {
+	state, err := model.ValueToState(value)
+	if err != nil {
+		m.Error().Msgf("watchGlobalTaskState, value to state %s\n", err)
+		return
+	}
+
+	if state.IsCanRun() {
+		oneTask := KeyVal{
+			key:     key,
+			val:     string(value),
+			state:   state,
+			version: version,
+		}
+		go m.assignMutex(oneTask, false)
+	}
+}
+
 // watch 全局任务队列的变化
 func (m *Mjobs) watchGlobalTaskState() {
 	// 先获取节点状态
@@ -12,17 +30,8 @@ func (m *Mjobs) watchGlobalTaskState() {
 	if err == nil {
 		for _, ev := range rsp.Kvs {
 			key := string(ev.Key)
-			value := string(ev.Value)
 
-			state, err := model.ValueToState(ev.Value)
-			if err != nil {
-				m.Error().Msgf("watchGlobalTaskState, value to state %s\n", err)
-				continue
-			}
-
-			if state.IsCanRun() {
-				go m.assignMutex(newKv(key, value, int(rsp.Header.Revision)), false)
-			}
+			m.todoCallTask(key, ev.Value, int(rsp.Header.Revision))
 		}
 	}
 
@@ -31,17 +40,17 @@ func (m *Mjobs) watchGlobalTaskState() {
 	for ersp := range readGlobal {
 		for _, ev := range ersp.Events {
 			key := string(ev.Kv.Key)
-			value := string(ev.Kv.Value)
+			version := ev.Kv.Version
 
 			m.Debug().Msgf("watch create(%t) update(%t) delete(%t) global task:%s, state:%s, version:%d\n",
 				ev.IsCreate(), ev.IsModify(), ev.Type == clientv3.EventTypeDelete,
 				ev.Kv.Key, ev.Kv.Value,
-				ev.Kv.Version)
+				version)
 
 			switch {
 			case ev.IsCreate(), ev.IsModify():
 
-				go m.assignMutex(newKv(key, value, int(ev.Kv.ModRevision)), false)
+				m.todoCallTask(key, ev.Kv.Value, int(version))
 			case ev.Type == clientv3.EventTypeDelete:
 			}
 		}

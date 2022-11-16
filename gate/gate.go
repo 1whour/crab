@@ -335,12 +335,12 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 		return
 	}
 
-	// 创建数据队列
+	// 创建全局数据队列key名
 	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
-	// 创建状态队列
+	// 创建全局状态队列key名
 	globalTaskStateName := model.FullGlobalTaskState(req.Executer.TaskName)
 
-	// 先get，如果有值直接返回
+	// 先get，更新时如果没有值直接返回
 	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
 	if len(rsp.Kvs) == 0 {
 		r.error(c, 500, "Task is empty and cannot be %s:%s", action, globalTaskName)
@@ -356,12 +356,14 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 		req.SetRemove()
 	}
 
+	// 请求重新序列化成json, 把action的变化加进去
 	all, err := json.Marshal(req)
 	if err != nil {
 		r.error(c, 500, "marshal req:%v", err)
 		return
 	}
 
+	// 获取全局状态队列里面的值
 	rspState, err := defaultKVC.Get(r.ctx, globalTaskStateName)
 	if err != nil {
 		r.error(c, 500, "get.globalTaskStateName err :%v", err)
@@ -372,12 +374,14 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 	rspStateModRevision := rspState.Kvs[0].ModRevision
 	r.Debug().Msgf("get version:%v, ModRevision:%v\n", rsp.Kvs[0].Version, rspModRevision)
 
-	newValue, err := model.OnlyUpdateState(rspState.Kvs[0].Value, model.CanRunJSON)
+	// 更新json中的State是CanRun
+	newValue, err := model.OnlyUpdateState(rspState.Kvs[0].Value, model.CanRun)
 	if err != nil {
 		r.error(c, 500, "updateTask, onlyUpdateState(CanRun) err :%v", err)
 		return
 	}
 
+	// 使用事务更新
 	txn := defaultKVC.Txn(r.ctx)
 	txn.If(clientv3.Compare(clientv3.ModRevision(globalTaskName), "=", rspModRevision),
 		clientv3.Compare(clientv3.ModRevision(globalTaskStateName), "=", rspStateModRevision),
@@ -387,6 +391,7 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 			clientv3.OpPut(globalTaskStateName, string(newValue)), //更新全局状态队列里面的状态
 		).Else()
 
+	// 提交事务
 	txnRsp, err := txn.Commit()
 	if err != nil {
 		r.error(c, 500, "Transaction execution failed err :%v", err)

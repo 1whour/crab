@@ -65,11 +65,8 @@ func (m *Mjobs) init() (err error) {
 type KeyVal struct {
 	key     string
 	val     string
+	state   model.State
 	version int
-}
-
-func newKv(key string, value string, version int) KeyVal {
-	return KeyVal{key: key, val: value, version: version}
 }
 
 var createOneTask = func() []KeyVal {
@@ -164,18 +161,6 @@ func (m *Mjobs) assignMutex(oneTask KeyVal, failover bool) {
 }
 
 func (m *Mjobs) assignMutexWithCb(oneTask KeyVal, failover bool, cb func()) {
-	state := model.State{}
-	if err := json.Unmarshal([]byte(oneTask.val), &state); err != nil {
-		m.Warn().Msgf("assignMutex.Unmarshal %s, key(%s) val(%s)\n", err, oneTask.key, oneTask.val)
-		return
-	}
-
-	/*
-		if !state.IsCanRun() {
-			return
-		}
-	*/
-
 	mutexName := model.AssignTaskMutex(oneTask.key)
 
 	s, _ := concurrency.NewSession(defautlClient)
@@ -218,7 +203,7 @@ func (m *Mjobs) selectRuntimeNode() (string, error) {
 
 // 分配任务的逻辑
 func (m *Mjobs) assign(oneTask KeyVal, failover bool) {
-	m.Debug().Msgf("call assign, key:%s\n", oneTask.key)
+	m.Debug().Msgf("call assign, key:%s, state:%s\n", oneTask.key, oneTask.state.State)
 
 	kv := oneTask
 	runtimeNode, err := m.selectRuntimeNode()
@@ -232,7 +217,7 @@ func (m *Mjobs) assign(oneTask KeyVal, failover bool) {
 		return
 	}
 
-	m.Debug().Msgf("assign, taskName %s\n", taskName)
+	m.Debug().Msgf("assign, taskName %s, action:%s\n", taskName)
 	rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTask(taskName), clientv3.WithRev(int64(oneTask.version)))
 	if err != nil {
 		m.Error().Msgf("get global task path fail:%s\n", err)

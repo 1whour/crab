@@ -238,8 +238,9 @@ func (r *Runtime) readLoop(conn *websocket.Conn) error {
 		}
 
 		go func() {
+			r.Debug().Msgf("crud action:%s, taskName:%s\n", param.Action, param.Executer.TaskName)
 			if err := r.runCrudCmd(conn, &param); err != nil {
-				r.Error().Msgf("runtime.runCrud:%s\n", err)
+				r.Error().Msgf("runtime.runCrud, action(%s):%s\n", param.Action, err)
 				//r.writeError(conn, r.WriteTimeout, 1, err.Error())
 				return
 			}
