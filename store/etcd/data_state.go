@@ -31,6 +31,7 @@ func NewStore(EtcdAddr []string) (*EtcdStore, error) {
 	}, nil
 }
 
+// 创建全局状态与数据队列
 func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, globalData string) error {
 
 	// 创建数据队列
@@ -62,6 +63,7 @@ func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, glo
 	return nil
 }
 
+// 更新全局数据与状态队列
 func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, globalData string, rspModRevision int64, state string, action string) error {
 
 	globalTaskName := model.FullGlobalTask(taskName)

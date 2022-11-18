@@ -23,7 +23,7 @@ type State struct {
 	//任务的状态, Create, Update, Stop, Rm
 	Action string
 	//任务下次的次数, 每次下发就会+1
-	Number int
+	Successed int
 	//创建时间, 日志作用
 	CreateTime time.Time
 	//更新时间, 日志作用
