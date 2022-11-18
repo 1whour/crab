@@ -28,7 +28,33 @@ func NewStore(EtcdAddr []string) (*EtcdStore, error) {
 	}, nil
 }
 
-func (e *EtcdStore) UpdateState(ctx context.Context, taskName string, globalData string, rspModRevision int64, stateAction string) error {
+func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, globalData string) error {
+
+	// 创建数据队列
+	globalTaskName := model.FullGlobalTask(taskName)
+
+	// 创建状态队列
+	globalTaskStateName := model.FullGlobalTaskState(taskName)
+
+	txn := e.defaultKVC.Txn(ctx)
+	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", 0)).
+		Then(
+			clientv3.OpPut(globalTaskName, globalData),
+			clientv3.OpPut(globalTaskStateName, model.CanRunJSON),
+		).Else()
+
+	txnRsp, err := txn.Commit()
+	if err != nil {
+		return fmt.Errorf("Transaction execution failed err :%v", err)
+	}
+
+	if !txnRsp.Succeeded {
+		return fmt.Errorf("Transaction execution failed")
+	}
+	return nil
+}
+
+func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, globalData string, rspModRevision int64, stateAction string) error {
 
 	globalTaskName := model.FullGlobalTask(taskName)
 	// 创建全局状态队列key名

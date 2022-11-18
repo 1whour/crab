@@ -276,10 +276,9 @@ func (r *Gate) createTask(c *gin.Context) {
 	}
 
 	r.Debug().Msgf("start create \n")
+	taskName := req.Executer.TaskName
 	// 创建数据队列
-	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
-	// 创建状态队列
-	globalTaskStateName := model.FullGlobalTaskState(req.Executer.TaskName)
+	globalTaskName := model.FullGlobalTask(taskName)
 
 	// 先get，如果有值直接返回
 	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
@@ -295,21 +294,8 @@ func (r *Gate) createTask(c *gin.Context) {
 		return
 	}
 
-	txn := defaultKVC.Txn(r.ctx)
-	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", 0)).
-		Then(
-			clientv3.OpPut(globalTaskName, string(all)),
-			clientv3.OpPut(globalTaskStateName, model.CanRunJSON),
-		).Else()
-
-	txnRsp, err := txn.Commit()
-	if err != nil {
-		r.error(c, 500, "事务执行失败err :%v", err)
-		return
-	}
-
-	if !txnRsp.Succeeded {
-		r.error(c, 500, "事务失败")
+	if err := defaultStore.CreateDataAndState(r.ctx, taskName, string(all)); err != nil {
+		r.error(c, 500, err.Error())
 		return
 	}
 
@@ -368,7 +354,7 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 
 	taskName := req.Executer.TaskName
 
-	err = defaultStore.UpdateState(r.ctx, taskName, string(all), rsp.Kvs[0].ModRevision, model.CanRun)
+	err = defaultStore.UpdateDataAndState(r.ctx, taskName, string(all), rsp.Kvs[0].ModRevision, model.CanRun)
 	if err != nil {
 		r.error(c, 500, err.Error())
 		return
