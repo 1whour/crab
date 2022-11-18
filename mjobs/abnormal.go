@@ -12,7 +12,7 @@ import (
 // 1.如果是故障转移的广播任务, 按道理，只应该在没有的机器上创建这个任务, 目前广播 TODO优化
 // 2.如果是单runtime任务，任选一个runtime执行
 func (m *Mjobs) failover(fullRuntime string) error {
-	localPrefix := model.RuntimeNodeToLocalTaskPrefix(fullRuntime)
+	localPrefix := model.ToLocalTaskPrefix(fullRuntime)
 	rsp, err := defaultKVC.Get(m.ctx, localPrefix, clientv3.WithPrefix())
 	if err != nil {
 		return err
@@ -86,8 +86,8 @@ func (m *Mjobs) restartRunning() {
 					m.Debug().Msgf("restartRunning, get local.runq.task.runtimeNode.size:%d, need fix %s\n", len(ip.Kvs), kv.Key)
 
 					fullGlobalTask := string(kv.Key)
-					taskName := model.TaskNameFromGlobalTask(fullGlobalTask)
-					ltaskPath := model.RuntimeNodeToLocalTask(fullGlobalTask, taskName)
+					taskName := model.TaskName(fullGlobalTask)
+					ltaskPath := model.ToLocalTask(fullGlobalTask, taskName)
 
 					var err error
 					oneTask := KeyVal{key: string(kv.Key),

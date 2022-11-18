@@ -192,7 +192,7 @@ func (m *Mjobs) assign(oneTask KeyVal, failover bool) {
 		return
 	}
 	// 从状态信息里面获取tastName
-	taskName := model.TaskNameFromState(kv.key)
+	taskName := model.TaskName(kv.key)
 	if taskName == "" {
 		m.Debug().Msgf("taskName is empty, %s\n", kv.key)
 		return

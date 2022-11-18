@@ -24,7 +24,7 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 			// 本地队列全名
 			localKey := string(ev.Kv.Key)
 			// 提取task名
-			taskName := model.TaskNameFromState(localKey)
+			taskName := model.TaskName(localKey)
 			// 生成全局队列名
 			globalKey := model.ToGlobalTask(localKey)
 			// 获取全局队列里面的task配置信息
@@ -53,6 +53,8 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 				// TODO, 成功的状态是model.Succeeded, 失败的状态是model.Failed
 				if err := utils.WriteMessageTimeout(conn, value, r.WriteTime); err != nil {
 					r.Warn().Msgf("gate.watchLocalRunq, WriteMessageTimeout :%s\n", err)
+					// 更新全局状态, 修改为失败标志
+					defaultStore.UpdateCallStateFailed(r.ctx, taskName)
 					continue
 				}
 
@@ -61,6 +63,8 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 					defaultKVC.Delete(r.ctx, localKey)
 					defaultKVC.Delete(r.ctx, model.FullGlobalTaskState(taskName)) //删除本地队列
 				} else {
+					// 更新全局状态, 修改为成功标志
+					defaultStore.UpdateCallStateSuccessed(r.ctx, taskName)
 
 				}
 			case ev.Type == clientv3.EventTypeDelete:

@@ -48,6 +48,21 @@ func NewState() ([]byte, error) {
 	return json.Marshal(&State{State: CanRun, Action: Create, CreateTime: now, UpdateTime: now})
 }
 
+func UpdateStateAck(value []byte, successed bool) ([]byte, error) {
+	s, err := ValueToState(value)
+	if err != nil {
+		return nil, err
+	}
+	if successed {
+		s.Successed++
+	} else {
+		s.State = Failed
+	}
+
+	s.UpdateTime = time.Now()
+	return json.Marshal(s)
+}
+
 // 删除，更新，stop时调用
 func UpdateState(value []byte, runtimeNode string, state string, action string) ([]byte, error) {
 	s, err := ValueToState(value)

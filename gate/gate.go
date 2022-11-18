@@ -328,7 +328,7 @@ func (r *Gate) status(c *gin.Context) {
 				c.String(500, err.Error())
 				return
 			}
-			taskName := model.TaskNameFromState(s.RuntimeNode)
+			taskName := model.TaskName(s.RuntimeNode)
 			ip := ""
 			if len(s.RuntimeNode) > 0 {
 				rspState, err = defaultKVC.Get(r.ctx, s.RuntimeNode)

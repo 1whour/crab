@@ -31,7 +31,7 @@ func NewStore(EtcdAddr []string) (*EtcdStore, error) {
 	}, nil
 }
 
-// 创建全局状态与数据队列
+// 创建全局状态与数据队列, 仅仅保存
 func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, globalData string) error {
 
 	// 创建数据队列
@@ -63,7 +63,7 @@ func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, glo
 	return nil
 }
 
-// 更新全局数据与状态队列
+// 更新全局数据与状态队列, 仅仅更新数据
 func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, globalData string, rspModRevision int64, state string, action string) error {
 
 	globalTaskName := model.FullGlobalTask(taskName)
@@ -113,7 +113,7 @@ func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, r
 	fullTaskState := model.FullGlobalTaskState(taskName)
 
 	// 生成本地队列的名字, 包含runtime和taskName
-	ltaskPath := model.RuntimeNodeToLocalTask(runtimeNode, taskName)
+	ltaskPath := model.ToLocalTask(runtimeNode, taskName)
 
 	// 更新状态中的runtimeNode
 	newValue, err := model.UpdateState(rsp.Kvs[0].Value, runtimeNode, model.Running, action)
@@ -138,4 +138,51 @@ func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, r
 		err = errors.New("Transaction execution failed")
 	}
 	return
+}
+
+func (e *EtcdStore) UpdateCallStateInner(ctx context.Context, taskName string, succeeded bool) (err error) {
+
+	// 生成全局state key名
+	globalTaskState := model.ToGlobalTaskState(taskName)
+
+	// 获取state的值
+	rspState, err := e.defaultKVC.Get(ctx, globalTaskState)
+	if err != nil {
+		return err
+	}
+
+	// 获取 修改版本号
+	modRevision := rspState.Kvs[0].ModRevision
+	fullTaskState := model.FullGlobalTaskState(taskName)
+
+	// 更新状态中的runtimeNode
+	newValue, err := model.UpdateStateAck(rspState.Kvs[0].Value, succeeded)
+	if err != nil {
+		return err
+	}
+
+	// 带事务更新
+	txn := e.defaultKVC.Txn(ctx)
+	txnRsp, err := txn.If(
+		clientv3.Compare(clientv3.ModRevision(fullTaskState), "=", modRevision),
+	).Then(
+		clientv3.OpPut(fullTaskState, string(newValue)),
+	).Commit()
+
+	if err != nil {
+		return err
+	}
+
+	if !txnRsp.Succeeded {
+		err = errors.New("Transaction execution failed")
+	}
+	return
+}
+
+func (e *EtcdStore) UpdateCallStateSuccessed(ctx context.Context, taskName string) error {
+	return e.UpdateCallStateInner(ctx, taskName, true)
+}
+
+func (e *EtcdStore) UpdateCallStateFailed(ctx context.Context, taskName string) error {
+	return e.UpdateCallStateInner(ctx, taskName, false)
 }
