@@ -38,12 +38,17 @@ func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, glo
 
 	// 创建状态队列
 	globalTaskStateName := model.FullGlobalTaskState(taskName)
+	// 创建全局状态队列里面的队列
+	state, err := model.NewState()
+	if err != nil {
+		return err
+	}
 
 	txn := e.defaultKVC.Txn(ctx)
 	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", 0)).
 		Then(
 			clientv3.OpPut(globalTaskName, globalData),
-			clientv3.OpPut(globalTaskStateName, model.CanRunJSON),
+			clientv3.OpPut(globalTaskStateName, string(state)),
 		).Else()
 
 	txnRsp, err := txn.Commit()
@@ -57,7 +62,7 @@ func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, glo
 	return nil
 }
 
-func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, globalData string, rspModRevision int64, stateAction string) error {
+func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, globalData string, rspModRevision int64, state string, action string) error {
 
 	globalTaskName := model.FullGlobalTask(taskName)
 	// 创建全局状态队列key名
@@ -72,7 +77,7 @@ func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, glo
 	rspStateModRevision := rspState.Kvs[0].ModRevision
 
 	// 更新json中的State是CanRun
-	newValue, err := model.OnlyUpdateState(rspState.Kvs[0].Value, stateAction)
+	newValue, err := model.UpdateState(rspState.Kvs[0].Value, state, action)
 	if err != nil {
 		return fmt.Errorf("updateTask, onlyUpdateState(CanRun) err :%v", err)
 	}
@@ -118,7 +123,7 @@ func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, r
 		clientv3.Compare(clientv3.ModRevision(fullTaskState), "=", modRevision),
 	).Then(
 		clientv3.OpPut(fullTaskState, string(newValue)),
-		// 向本地队列写入任务
+		// 向本地队列写入任务, 目前本地队列的值没啥作用
 		clientv3.OpPut(ltaskPath, model.CanRun),
 	).Commit()
 

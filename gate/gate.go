@@ -354,7 +354,7 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 
 	taskName := req.Executer.TaskName
 
-	err = defaultStore.UpdateDataAndState(r.ctx, taskName, string(all), rsp.Kvs[0].ModRevision, model.CanRun)
+	err = defaultStore.UpdateDataAndState(r.ctx, taskName, string(all), rsp.Kvs[0].ModRevision, model.CanRun, action)
 	if err != nil {
 		r.error(c, 500, err.Error())
 		return

@@ -1,38 +1,34 @@
 package model
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 const (
 	CanRun  = "canrun"  //可以运行，任务被创建时的状态
 	Running = "running" //任务被分配之后，运行中, oneRuntime字段绑定runtimeNode的节点
-	//Succeeded = "succeeded" //这个任务成功地发生到runtime节点, 目前还不需要这个状态
-	Failed = "failed" //这个任务发送到runtime节点失败
+	Failed  = "failed"  //这个任务发送到runtime节点失败
 )
 
-var (
-	CanRunJSON  string
-	RunningJSON string
-)
+// 集群稳定的前提下(当runtime的个数>=1 gate的个数>=1)，什么样的任务可以被恢复?
 
-func init() {
-	canRun, _ := MarshalToJson("", CanRun)
-	running, _ := MarshalToJson("", Running)
-
-	CanRunJSON = string(canRun)
-	RunningJSON = string(running)
-}
-
+// 1.如果是Create和Update的任务，任务绑定的runtime是空, State是任何状态，都需要被恢复, 这是一个还需要被运行的状态
+// 2.如果是Stop和Rm的任务, 如果runtimeNode不为空。Number == 0时会尝试一次
 type State struct {
-	RuntimeNode string //这个任务绑定的runtime节点
-	State       string //运行状态
-	Action      string //任务的状态, TODO
+	// 每个任务从全局队列中分配到本地队列都会绑定一个runtime
+	RuntimeNode string
+	//运行状态, CanRun, Running, failed
+	State string
+	//任务的状态, Create, Update, Stop, Rm
+	Action string
+	//任务下次的次数, 每次下发就会+1
+	Number int
+	//创建时间, 日志作用
+	CreateTime time.Time
+	//更新时间, 日志作用
+	UpdateTime time.Time
 }
-
-/*
-func (s State) IsSucceeded() bool {
-	return s.State == Succeeded
-}
-*/
 
 func (s State) IsFailed() bool {
 	return s.State == Failed
@@ -46,8 +42,27 @@ func (s State) IsCanRun() bool {
 	return s.State == CanRun
 }
 
+// 创建任务时调用
+func NewState() ([]byte, error) {
+	now := time.Now()
+	return json.Marshal(&State{State: CanRun, Action: Create, CreateTime: now, UpdateTime: now})
+}
+
+// 删除，更新，stop时调用
+func UpdateState(value []byte, state string, action string) ([]byte, error) {
+	s, err := ValueToState(value)
+	if err != nil {
+		return nil, err
+	}
+
+	s.State = state
+	s.Action = action
+	s.UpdateTime = time.Now()
+	return json.Marshal(&s)
+}
+
 func MarshalToJson(runtimeNode string, state string) ([]byte, error) {
-	return json.Marshal(&State{RuntimeNode: runtimeNode, State: state})
+	return json.Marshal(&State{RuntimeNode: runtimeNode, State: state, UpdateTime: time.Now()})
 }
 
 func OnlyUpdateRuntimeNode(value []byte, runtimeNode string) ([]byte, error) {
@@ -57,16 +72,7 @@ func OnlyUpdateRuntimeNode(value []byte, runtimeNode string) ([]byte, error) {
 	}
 
 	s.RuntimeNode = runtimeNode
-	return json.Marshal(&s)
-}
-
-func OnlyUpdateState(value []byte, state string) ([]byte, error) {
-	s, err := ValueToState(value)
-	if err != nil {
-		return nil, err
-	}
-
-	s.State = state
+	s.UpdateTime = time.Now()
 	return json.Marshal(&s)
 }
 

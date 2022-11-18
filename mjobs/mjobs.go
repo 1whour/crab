@@ -10,6 +10,7 @@ import (
 
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/slog"
+	"github.com/gnh123/scheduler/store/etcd"
 	"github.com/gnh123/scheduler/utils"
 	"github.com/google/uuid"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -44,6 +45,7 @@ type mParam struct {
 var (
 	defautlClient *clientv3.Client
 	defaultKVC    clientv3.KV
+	defautlStore  *etcd.EtcdStore
 )
 
 func (m *Mjobs) init() (err error) {
@@ -59,7 +61,8 @@ func (m *Mjobs) init() (err error) {
 	}
 
 	defaultKVC = clientv3.NewKV(defautlClient) // 内置自动重试的逻辑
-	return nil
+	defautlStore, err = etcd.NewStore(m.EtcdAddr)
+	return err
 }
 
 type KeyVal struct {
@@ -113,32 +116,8 @@ func (m *Mjobs) oneRuntime(taskName string, param *mParam, runtimeNode string, f
 		return
 	}
 
-	// 生成本地队列的名字, 包含runtime和taskName
-	ltaskPath := model.RuntimeNodeToLocalTask(runtimeNode, taskName)
-	// 向本地队列写入任务
-	if _, err = defaultKVC.Put(m.ctx, ltaskPath, model.CanRun); err != nil {
+	if err = defautlStore.UpdateLocalAndGlobal(m.ctx, taskName, runtimeNode, rsp.Kvs[0].ModRevision); err != nil {
 		return err
-	}
-
-	// 更新状态中的runtimeNode
-	newValue, err := model.MarshalToJson(runtimeNode, model.Running)
-	if err != nil {
-		return err
-	}
-
-	txn := defaultKVC.Txn(m.ctx)
-	txnRsp, err := txn.If(
-		clientv3.Compare(clientv3.ModRevision(fullTaskState), "=", rsp.Kvs[0].ModRevision),
-	).Then(
-		clientv3.OpPut(fullTaskState, string(newValue)),
-	).Commit()
-
-	if err != nil {
-		return err
-	}
-
-	if !txnRsp.Succeeded {
-		err = errors.New("Transaction execution failed")
 	}
 
 	// 更新状态中的值

@@ -59,14 +59,22 @@ func (m *Mjobs) restartRunning() {
 				continue
 			}
 
+			// 异常条件:
 			// 1.mjobs模板把任务分配到本地队列状态是running, 如果这时候runtime挂了, runtimeNode会被从etcd自动删除
 			//  判断条件就是state.IsRunning() && len(state.restartRunning) > 0 (running和当前任务的runtimeNode不存在)
 
-			// 2.如果把任务写回至runtime挂了，真挂了，可以走进第一个逻辑恢复, 这两种算一种异常
+			// 2.如果把任务写回至runtime websocket连接挂了，runtime进程也死了，可以走进第一个逻辑恢复, 这两种算一种异常
 
 			// 3.如果gate把任务分配至runtime这时候连接挂了，runtime进程还在，需要把任务的状态修改(gate)为failed, 下一次重新分配
 
 			// 4.如果任务是Stop, Rm的任务仅仅保证执行一次
+
+			// 做法:
+			// 集群稳定的前提下(当runtime的个数>=1 gate的个数>=1)，什么样的任务可以被恢复?
+
+			// 1.如果是Create和Update的任务，任务绑定的runtime是空, State是任何状态，都需要被恢复, 这是一个还需要被运行的状态
+
+			// 2.如果是Stop和Rm的任务, 如果runtimeNode不为空。Number == 0时会尝试一次
 			if state.IsRunning() || state.IsFailed() {
 				ip, err := defaultKVC.Get(m.ctx, state.RuntimeNode)
 				if err != nil {

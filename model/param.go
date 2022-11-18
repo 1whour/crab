@@ -14,6 +14,13 @@ type Param struct {
 	ExecTime time.Time     `json:"execTime" yaml:"execTime"`
 }
 
+const (
+	Create = "create"
+	Rm     = "remove"
+	Stop   = "stop"
+	Update = "update"
+)
+
 // 任务的触发器
 type Trigger struct {
 	Cron string `yaml:"cron" json:"cron" binding:"required"`
@@ -28,7 +35,7 @@ func (p *Param) IsBroadcast() bool {
 }
 
 func (p *Param) SetCreate() {
-	p.Action = "create"
+	p.Action = Create
 }
 
 func (p *Param) SetRemove() {
