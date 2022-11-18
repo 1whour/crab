@@ -1,7 +1,6 @@
 package gate
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,7 +14,6 @@ import (
 	"github.com/gnh123/scheduler/utils"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/olekukonko/tablewriter"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -302,60 +300,6 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 	}
 
 	r.ok(c, fmt.Sprintf("%s Execution succeeded", action)) //返回正确业务码
-}
-
-// 构造status数据
-// 内部使用接口， 直接返回格式化后的数据
-// 标题如下
-// taskName, status, runtimeNode, runtimeIP
-
-func (r *Gate) status(c *gin.Context) {
-	format := c.Param("format")
-	// 目前既既支持table格式数据
-	if format == "table" {
-
-		data := [][]string{}
-		rspState, err := defaultKVC.Get(r.ctx, model.GlobalTaskPrefixState, clientv3.WithPrefix())
-		if err != nil {
-			c.String(500, err.Error())
-			return
-		}
-
-		for _, kv := range rspState.Kvs {
-			var d []string
-			s, err := model.ValueToState(kv.Value)
-			if err != nil {
-				c.String(500, err.Error())
-				return
-			}
-			taskName := model.TaskName(s.RuntimeNode)
-			ip := ""
-			if len(s.RuntimeNode) > 0 {
-				rspState, err = defaultKVC.Get(r.ctx, s.RuntimeNode)
-				if err != nil {
-					c.String(500, err.Error())
-					return
-				}
-				if len(rspState.Kvs) > 0 {
-
-					ip = string(rspState.Kvs[0].Value)
-				}
-			}
-			d = append(d, taskName, s.State, s.RuntimeNode, ip)
-			data = append(data, d)
-		}
-
-		var buf bytes.Buffer
-
-		table := tablewriter.NewWriter(&buf)
-		table.SetHeader([]string{"taskName", "status", "runtimeNode", "runtimeIP"})
-		for _, d := range data {
-			table.Append(d)
-		}
-		table.Render()
-
-		c.String(200, buf.String())
-	}
 }
 
 // 该模块入口函数
