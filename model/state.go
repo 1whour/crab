@@ -30,6 +30,22 @@ type State struct {
 	UpdateTime time.Time
 }
 
+func (s State) IsCreate() bool {
+	return s.Action == Create
+}
+
+func (s State) IsUpdate() bool {
+	return s.Action == Update
+}
+
+func (s State) IsStop() bool {
+	return s.Action == Stop
+}
+
+func (s State) IsRemove() bool {
+	return s.Action == Rm
+}
+
 func (s State) IsFailed() bool {
 	return s.State == Failed
 }

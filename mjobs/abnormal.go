@@ -38,6 +38,24 @@ func (m *Mjobs) failover(fullRuntime string) error {
 	return nil
 }
 
+func (m *Mjobs) needRestart(state model.State) bool {
+	if state.IsFailed() {
+		return true
+	}
+
+	ip, err := defaultKVC.Get(m.ctx, state.RuntimeNode)
+	if err != nil {
+		m.Error().Msgf("restartRunning: get ip %v\n", err)
+		return false
+	}
+
+	if (state.IsStop() || state.IsRemove()) && state.Successed == 0 && len(ip.Kvs) > 0 {
+		return true
+	}
+
+	return (state.IsCreate() || state.IsUpdate()) && len(ip.Kvs) == 0
+}
+
 // 检查全局队列中的死任务Running状态的，重新加载到runtime里面
 // 单机任务随机找个节点执行
 // 广播任务, 只广播到当前的所有的节点
@@ -75,37 +93,29 @@ func (m *Mjobs) restartRunning() {
 			// 1.如果是Create和Update的任务，任务绑定的runtime是空, State是任何状态，都需要被恢复, 这是一个还需要被运行的状态
 
 			// 2.如果是Stop和Rm的任务, 如果runtimeNode不为空。Number == 0时会尝试一次
-			if state.IsRunning() || state.IsFailed() {
-				ip, err := defaultKVC.Get(m.ctx, state.RuntimeNode)
+			if m.needRestart(state) {
+				m.Debug().Msgf("restartRunning, need fix %s, state\n", kv.Key, state)
+
+				fullGlobalTask := string(kv.Key)
+				taskName := model.TaskName(fullGlobalTask)
+				ltaskPath := model.ToLocalTask(fullGlobalTask, taskName)
+
+				var err error
+				oneTask := KeyVal{key: string(kv.Key),
+					val:     string(kv.Value),
+					version: int(kv.ModRevision),
+					state:   state,
+				}
+
+				m.assignMutexWithCb(oneTask, true, func() {
+					_, err = defaultKVC.Delete(m.ctx, ltaskPath)
+				})
+
 				if err != nil {
-					m.Error().Msgf("restartRunning: get ip %v\n", err)
+					m.Error().Msgf("restartRunning, %v\n", err)
 					continue
 				}
 
-				if len(ip.Kvs) == 0 || state.IsFailed() {
-					m.Debug().Msgf("restartRunning, get local.runq.task.runtimeNode.size:%d, need fix %s\n", len(ip.Kvs), kv.Key)
-
-					fullGlobalTask := string(kv.Key)
-					taskName := model.TaskName(fullGlobalTask)
-					ltaskPath := model.ToLocalTask(fullGlobalTask, taskName)
-
-					var err error
-					oneTask := KeyVal{key: string(kv.Key),
-						val:     string(kv.Value),
-						version: int(kv.ModRevision),
-						state:   state,
-					}
-
-					m.assignMutexWithCb(oneTask, true, func() {
-						_, err = defaultKVC.Delete(m.ctx, ltaskPath)
-					})
-
-					if err != nil {
-						m.Error().Msgf("restartRunning, %v\n", err)
-						continue
-					}
-
-				}
 			}
 		}
 
