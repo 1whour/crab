@@ -4,8 +4,9 @@ import "encoding/json"
 
 const (
 	CanRun  = "canrun"  //可以运行，任务被创建时的状态
-	Running = "running" //任务被分配之后，运行中, oneRuntime记录runtimeNode的编号
-	Stop    = "stop"    //这个任务被中止
+	Running = "running" //任务被分配之后，运行中, oneRuntime字段绑定runtimeNode的节点
+	//Succeeded = "succeeded" //这个任务成功地发生到runtime节点, 目前还不需要这个状态
+	Failed = "failed" //这个任务发送到runtime节点失败
 )
 
 var (
@@ -24,14 +25,21 @@ func init() {
 type State struct {
 	RuntimeNode string //这个任务绑定的runtime节点
 	State       string //运行状态
+	Action      string //任务的状态, TODO
+}
+
+/*
+func (s State) IsSucceeded() bool {
+	return s.State == Succeeded
+}
+*/
+
+func (s State) IsFailed() bool {
+	return s.State == Failed
 }
 
 func (s State) IsRunning() bool {
 	return s.State == Running
-}
-
-func (s State) IsStop() bool {
-	return s.State == Stop
 }
 
 func (s State) IsCanRun() bool {

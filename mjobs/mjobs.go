@@ -251,7 +251,9 @@ func (m *Mjobs) SubMain() {
 		return
 	}
 
+	// 异常恢复逻辑
 	go m.restartRunning()
+	// 监控runtime节点消失的
 	go m.watchRuntimeNode()
 	m.watchGlobalTaskState()
 }

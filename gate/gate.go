@@ -194,7 +194,8 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 
 			switch {
 			case ev.IsCreate(), ev.IsModify():
-				// 如果是新建或者被修改过的，直接退送到客户端
+				// 如果是新建或者被修改过的，直接推送到客户端
+				// TODO, 成功的状态是model.Succeeded, 失败的状态是model.Failed
 				if err := utils.WriteMessageTimeout(conn, value, r.WriteTime); err != nil {
 					r.Warn().Msgf("gate.watchLocalRunq, WriteMessageTimeout :%s\n", err)
 					continue

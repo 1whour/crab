@@ -219,11 +219,14 @@ create_and_check_shell_count() {
 
 }
 
-# 先创建，再更新
-create_and_stop_check
+# 重启集群
+restart_cluster_resume_task
 
 # 测试gate被重启是否能恢复任务
 #failover_gate
+
+# 先创建，再更新
+create_and_stop_check
 
 # 测试shell任务
 create_and_check_shell_count

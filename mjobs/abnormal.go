@@ -19,9 +19,15 @@ func (m *Mjobs) failover(fullRuntime string) error {
 	}
 
 	for _, keyval := range rsp.Kvs {
-		m.assignMutex(KeyVal{key: string(keyval.Key), val: string(keyval.Value)}, true)
+		key := model.ToGlobalTaskState(string(keyval.Key))
+		rsp, err := defaultKVC.Get(m.ctx, key)
+		if len(rsp.Kvs) == 0 {
+			continue
+		}
 
-		_, err := defaultKVC.Delete(m.ctx, string(keyval.Key))
+		m.assignMutex(KeyVal{key: string(rsp.Kvs[0].Key), val: string(rsp.Kvs[0].Value)}, true)
+
+		_, err = defaultKVC.Delete(m.ctx, string(keyval.Key))
 		if err != nil {
 			m.Warn().Msgf("failover.delete fail:%s\n", err)
 			continue
@@ -53,16 +59,23 @@ func (m *Mjobs) restartRunning() {
 				continue
 			}
 
-			// TODO state.IsCanRun(), 这个状态是否能加入异常恢复
-			if state.IsRunning() {
+			// 1.mjobs模板把任务分配到本地队列状态是running, 如果这时候runtime挂了
+			//  判断条件就是state.IsRunning() && len(state.restartRunning) > 0
+
+			// 2.如果把任务写回至runtime挂了，真挂了，可以走进第一个逻辑恢复, 这两种算一种异常
+
+			// 3.如果gate把任务分配至runtime这时候连接挂了，runtime进程还在，需要把任务的状态修改(gate)为failed, 下一次重新分配
+
+			// 4.如果任务是Stop, Rm的任务仅仅保证执行一次
+			if state.IsRunning() || state.IsFailed() {
 				ip, err := defaultKVC.Get(m.ctx, state.RuntimeNode)
 				if err != nil {
 					m.Error().Msgf("restartRunning: get ip %v\n", err)
 					continue
 				}
 
-				if len(ip.Kvs) == 0 {
-					m.Debug().Msgf("restartRunning, get runtimeNode.size:%d, need fix %s\n", len(ip.Kvs), kv.Key)
+				if len(ip.Kvs) == 0 || state.IsFailed() {
+					m.Debug().Msgf("restartRunning, get local.runq.task.runtimeNode.size:%d, need fix %s\n", len(ip.Kvs), kv.Key)
 
 					fullGlobalTask := string(kv.Key)
 					taskName := model.TaskNameFromGlobalTask(fullGlobalTask)
@@ -74,8 +87,8 @@ func (m *Mjobs) restartRunning() {
 						version: int(kv.ModRevision),
 						state:   state,
 					}
-					m.assignMutexWithCb(oneTask, true, func() {
 
+					m.assignMutexWithCb(oneTask, true, func() {
 						_, err = defaultKVC.Delete(m.ctx, ltaskPath)
 					})
 
@@ -89,7 +102,7 @@ func (m *Mjobs) restartRunning() {
 		}
 
 		// 3s检查一次
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 5)
 	}
 
 }

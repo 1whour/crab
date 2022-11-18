@@ -62,6 +62,12 @@ func FullLocalToGlobalTask(fullLocalName string) string {
 	return FullGlobalTask(name)
 }
 
+// 转成全局状态队列的key
+func ToGlobalTaskState(fullOrTaskName string) string {
+	taskName := takeNameFromPath(fullOrTaskName)
+	return FullGlobalTaskState(taskName)
+}
+
 // 全局队列相关两个辅助函数
 // 生成全局任务队列的路径
 func FullGlobalTask(taskName string) string {
@@ -87,7 +93,7 @@ func TaskNameFromGlobalTask(fullPath string) string {
 func takeNameFromPath(fullPath string) string {
 	pos := strings.LastIndex(fullPath, "/")
 	if pos == -1 {
-		return ""
+		return fullPath
 	}
 	return fullPath[pos+1:]
 }
