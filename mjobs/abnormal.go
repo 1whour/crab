@@ -59,8 +59,8 @@ func (m *Mjobs) restartRunning() {
 				continue
 			}
 
-			// 1.mjobs模板把任务分配到本地队列状态是running, 如果这时候runtime挂了
-			//  判断条件就是state.IsRunning() && len(state.restartRunning) > 0
+			// 1.mjobs模板把任务分配到本地队列状态是running, 如果这时候runtime挂了, runtimeNode会被从etcd自动删除
+			//  判断条件就是state.IsRunning() && len(state.restartRunning) > 0 (running和当前任务的runtimeNode不存在)
 
 			// 2.如果把任务写回至runtime挂了，真挂了，可以走进第一个逻辑恢复, 这两种算一种异常
 

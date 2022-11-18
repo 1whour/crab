@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/slog"
+	"github.com/gnh123/scheduler/store/etcd"
 	"github.com/gnh123/scheduler/utils"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -53,6 +54,7 @@ func (g *Gate) NodeName() string {
 var (
 	defautlClient *clientv3.Client
 	defaultKVC    clientv3.KV
+	defaultStore  *etcd.EtcdStore
 )
 
 func (r *Gate) init() (err error) {
@@ -73,7 +75,8 @@ func (r *Gate) init() (err error) {
 	}
 
 	defaultKVC = clientv3.NewKV(defautlClient) // 内置自动重试的逻辑
-	return nil
+	defaultStore, err = etcd.NewStore(r.EtcdAddr)
+	return err
 }
 
 func (r *Gate) autoNewAddr() (addr string) {
@@ -172,7 +175,7 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 			// 提取task名
 			taskName := model.TaskNameFromState(localKey)
 			// 生成全局队列名
-			globalKey := model.FullLocalToGlobalTask(localKey)
+			globalKey := model.ToGlobalTask(localKey)
 			// 获取全局队列里面的task配置信息
 			rsp, err := defaultKVC.Get(r.ctx, globalKey)
 			if err != nil {
@@ -183,6 +186,7 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 			if len(rsp.Kvs) == 0 {
 				continue
 			}
+
 			value := rsp.Kvs[0].Value
 
 			var param model.Param
@@ -338,8 +342,6 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 
 	// 创建全局数据队列key名
 	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
-	// 创建全局状态队列key名
-	globalTaskStateName := model.FullGlobalTaskState(req.Executer.TaskName)
 
 	// 先get，更新时如果没有值直接返回
 	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
@@ -364,43 +366,11 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 		return
 	}
 
-	// 获取全局状态队列里面的值
-	rspState, err := defaultKVC.Get(r.ctx, globalTaskStateName)
+	taskName := req.Executer.TaskName
+
+	err = defaultStore.UpdateState(r.ctx, taskName, string(all), rsp.Kvs[0].ModRevision, model.CanRun)
 	if err != nil {
-		r.error(c, 500, "get.globalTaskStateName err :%v", err)
-		return
-	}
-
-	rspModRevision := rsp.Kvs[0].ModRevision
-	rspStateModRevision := rspState.Kvs[0].ModRevision
-	r.Debug().Msgf("get version:%v, ModRevision:%v\n", rsp.Kvs[0].Version, rspModRevision)
-
-	// 更新json中的State是CanRun
-	newValue, err := model.OnlyUpdateState(rspState.Kvs[0].Value, model.CanRun)
-	if err != nil {
-		r.error(c, 500, "updateTask, onlyUpdateState(CanRun) err :%v", err)
-		return
-	}
-
-	// 使用事务更新
-	txn := defaultKVC.Txn(r.ctx)
-	txn.If(clientv3.Compare(clientv3.ModRevision(globalTaskName), "=", rspModRevision),
-		clientv3.Compare(clientv3.ModRevision(globalTaskStateName), "=", rspStateModRevision),
-	).
-		Then(
-			clientv3.OpPut(globalTaskName, string(all)),           //更新全局队列里面的数据
-			clientv3.OpPut(globalTaskStateName, string(newValue)), //更新全局状态队列里面的状态
-		).Else()
-
-	// 提交事务
-	txnRsp, err := txn.Commit()
-	if err != nil {
-		r.error(c, 500, "Transaction execution failed err :%v", err)
-		return
-	}
-
-	if !txnRsp.Succeeded {
-		r.error(c, 500, "Transaction execution failed")
+		r.error(c, 500, err.Error())
 		return
 	}
 

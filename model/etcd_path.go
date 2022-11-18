@@ -56,8 +56,8 @@ func RuntimeNodeToLocalTask(fullRuntimeName, taskName string) string {
 	return fullLocalRuntimeTask(runtimeName, taskName)
 }
 
-// 本地队列转成全局队列
-func FullLocalToGlobalTask(fullLocalName string) string {
+// 转成全局队列
+func ToGlobalTask(fullLocalName string) string {
 	name := takeNameFromPath(fullLocalName)
 	return FullGlobalTask(name)
 }
