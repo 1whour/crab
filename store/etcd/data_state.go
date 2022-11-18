@@ -2,12 +2,15 @@ package etcd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/utils"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
+
+// 本文件包含任务保存到etcd, 以及任务从任务队列分发到本地队列的逻辑
 
 type EtcdStore struct {
 	defaultKVC    clientv3.KV
@@ -94,4 +97,37 @@ func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, glo
 		return fmt.Errorf("Transaction execution failed")
 	}
 	return nil
+}
+
+// 更新本地队列和全局队列
+func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, runtimeNode string, modRevision int64) (err error) {
+
+	fullTaskState := model.FullGlobalTaskState(taskName)
+
+	// 生成本地队列的名字, 包含runtime和taskName
+	ltaskPath := model.RuntimeNodeToLocalTask(runtimeNode, taskName)
+
+	// 更新状态中的runtimeNode
+	newValue, err := model.MarshalToJson(runtimeNode, model.Running)
+	if err != nil {
+		return err
+	}
+
+	txn := e.defaultKVC.Txn(ctx)
+	txnRsp, err := txn.If(
+		clientv3.Compare(clientv3.ModRevision(fullTaskState), "=", modRevision),
+	).Then(
+		clientv3.OpPut(fullTaskState, string(newValue)),
+		// 向本地队列写入任务
+		clientv3.OpPut(ltaskPath, model.CanRun),
+	).Commit()
+
+	if err != nil {
+		return err
+	}
+
+	if !txnRsp.Succeeded {
+		err = errors.New("Transaction execution failed")
+	}
+	return
 }
