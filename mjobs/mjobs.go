@@ -93,15 +93,16 @@ func (m *Mjobs) setTaskToLocalrunq(taskName string, param *mParam, runtimeNode s
 func (m *Mjobs) oneRuntime(taskName string, param *mParam, runtimeNode string, failover bool) (err error) {
 	fullTaskState := model.FullGlobalTaskState(taskName)
 	// 获取全局队列中的状态
-	rsp, err := defaultKVC.Get(m.ctx, fullTaskState)
+	rspState, err := defaultKVC.Get(m.ctx, fullTaskState)
 	if err != nil {
 		m.Error().Msgf("oneRuntime %s\n", err)
 		return err
 	}
 
 	// 如果是更新或者删除或者stop的任务, 找到绑定的runtimeNode
+	var state model.State
 	if !failover && !param.IsCreate() {
-		state, err := model.ValueToState(rsp.Kvs[0].Value)
+		state, err = model.ValueToState(rspState.Kvs[0].Value)
 		if err != nil {
 			m.Error().Msgf("oneRuntime ValueToState %s\n", err)
 			return err
@@ -116,7 +117,7 @@ func (m *Mjobs) oneRuntime(taskName string, param *mParam, runtimeNode string, f
 		return
 	}
 
-	if err = defautlStore.UpdateLocalAndGlobal(m.ctx, taskName, runtimeNode, rsp.Kvs[0].ModRevision); err != nil {
+	if err = defautlStore.UpdateLocalAndGlobal(m.ctx, taskName, runtimeNode, rspState, state.Action); err != nil {
 		return err
 	}
 

@@ -77,7 +77,7 @@ func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, glo
 	rspStateModRevision := rspState.Kvs[0].ModRevision
 
 	// 更新json中的State是CanRun
-	newValue, err := model.UpdateState(rspState.Kvs[0].Value, state, action)
+	newValue, err := model.UpdateState(rspState.Kvs[0].Value, "", state, action)
 	if err != nil {
 		return fmt.Errorf("updateTask, onlyUpdateState(CanRun) err :%v", err)
 	}
@@ -105,15 +105,16 @@ func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, glo
 }
 
 // 更新本地队列和全局队列
-func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, runtimeNode string, modRevision int64) (err error) {
+func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, runtimeNode string, rsp *clientv3.GetResponse, action string) (err error) {
 
+	modRevision := rsp.Kvs[0].ModRevision
 	fullTaskState := model.FullGlobalTaskState(taskName)
 
 	// 生成本地队列的名字, 包含runtime和taskName
 	ltaskPath := model.RuntimeNodeToLocalTask(runtimeNode, taskName)
 
 	// 更新状态中的runtimeNode
-	newValue, err := model.MarshalToJson(runtimeNode, model.Running)
+	newValue, err := model.UpdateState(rsp.Kvs[0].Value, runtimeNode, model.Running, action)
 	if err != nil {
 		return err
 	}

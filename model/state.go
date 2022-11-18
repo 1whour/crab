@@ -49,29 +49,15 @@ func NewState() ([]byte, error) {
 }
 
 // 删除，更新，stop时调用
-func UpdateState(value []byte, state string, action string) ([]byte, error) {
-	s, err := ValueToState(value)
-	if err != nil {
-		return nil, err
-	}
-
-	s.State = state
-	s.Action = action
-	s.UpdateTime = time.Now()
-	return json.Marshal(&s)
-}
-
-func MarshalToJson(runtimeNode string, state string) ([]byte, error) {
-	return json.Marshal(&State{RuntimeNode: runtimeNode, State: state, UpdateTime: time.Now()})
-}
-
-func OnlyUpdateRuntimeNode(value []byte, runtimeNode string) ([]byte, error) {
+func UpdateState(value []byte, runtimeNode string, state string, action string) ([]byte, error) {
 	s, err := ValueToState(value)
 	if err != nil {
 		return nil, err
 	}
 
 	s.RuntimeNode = runtimeNode
+	s.State = state
+	s.Action = action
 	s.UpdateTime = time.Now()
 	return json.Marshal(&s)
 }
