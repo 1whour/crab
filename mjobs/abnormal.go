@@ -56,7 +56,7 @@ func (m *Mjobs) needRestart(state model.State) bool {
 		goto next
 	}
 
-	if (state.IsStop() || state.IsRemove()) && state.Successed && len(ip.Kvs) > 0 {
+	if (state.IsStop() || state.IsRemove()) && state.InRuntime && len(ip.Kvs) > 0 {
 		return true
 	}
 

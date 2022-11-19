@@ -46,14 +46,14 @@ func (r *Gate) status(c *gin.Context) {
 				}
 			}
 
-			d = append(d, taskName, s.State, s.Action, s.RuntimeNode, fmt.Sprintf("%t", s.Successed), s.CreateTime.String(), s.UpdateTime.String(), ip)
+			d = append(d, taskName, s.State, s.Action, s.RuntimeNode, fmt.Sprintf("%t", s.InRuntime), s.CreateTime.String(), s.UpdateTime.String(), ip)
 			data = append(data, d)
 		}
 
 		var buf bytes.Buffer
 
 		table := tablewriter.NewWriter(&buf)
-		table.SetHeader([]string{"taskName", "status", "action", "runtimeNode", "successed", "createTime", "updateTime", "runtimeIP"})
+		table.SetHeader([]string{"taskName", "status", "action", "runtimeNode", "InRuntime", "createTime", "updateTime", "runtimeIP"})
 		for _, d := range data {
 			table.Append(d)
 		}
