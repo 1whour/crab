@@ -119,15 +119,15 @@ func (r *Runtime) watchGateNode() {
 			case ev.IsCreate():
 				// 把新的gate地址加到当前addrs里面
 				r.addrs.Store(string(ev.Kv.Value), string(ev.Kv.Key))
-				r.Debug().Msgf("create gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
+				r.Debug().Msgf("watchGateNode:create gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
 			case ev.IsModify():
 				// 更新addrs里面的状态
 				r.addrs.Store(string(ev.Kv.Value), string(ev.Kv.Key))
-				r.Debug().Msgf("modify gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
+				r.Debug().Msgf("watchGateNode:modify gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
 			case ev.Type == clientv3.EventTypeDelete:
 				// 把被删除的gate从当前addrs里面移除
 				r.addrs.Delete(string(ev.Kv.Value))
-				r.Debug().Msgf("delete gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
+				r.Debug().Msgf("watchGateNode:delete gate value(%s), key(%s)\n", ev.Kv.Value, ev.Kv.Key)
 			}
 		}
 	}

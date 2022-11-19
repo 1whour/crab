@@ -46,7 +46,7 @@ func (r *Gate) status(c *gin.Context) {
 				}
 			}
 
-			d = append(d, taskName, s.State, s.Action, s.RuntimeNode, fmt.Sprintf("%d", s.Successed), s.CreateTime.String(), s.UpdateTime.String(), ip)
+			d = append(d, taskName, s.State, s.Action, s.RuntimeNode, fmt.Sprintf("%t", s.Successed), s.CreateTime.String(), s.UpdateTime.String(), ip)
 			data = append(data, d)
 		}
 

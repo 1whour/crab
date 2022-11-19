@@ -106,7 +106,7 @@ func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, glo
 	return nil
 }
 
-// 更新本地队列和全局队列
+// 更新本地队列和全局队列, 分配任务
 func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, runtimeNode string, rsp *clientv3.GetResponse, action string) (err error) {
 
 	modRevision := rsp.Kvs[0].ModRevision
@@ -115,6 +115,9 @@ func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, r
 	// 生成本地队列的名字, 包含runtime和taskName
 	ltaskPath := model.ToLocalTask(runtimeNode, taskName)
 
+	if action == "" {
+		panic("action is empty")
+	}
 	// 更新状态中的runtimeNode
 	newValue, err := model.UpdateState(rsp.Kvs[0].Value, runtimeNode, model.Running, action)
 	if err != nil {

@@ -101,13 +101,13 @@ func (m *Mjobs) oneRuntime(taskName string, param *mParam, runtimeNode string, f
 
 	// 如果是更新或者删除或者stop的任务, 找到绑定的runtimeNode
 	var state model.State
-	if !failover && !param.IsCreate() {
-		state, err = model.ValueToState(rspState.Kvs[0].Value)
-		if err != nil {
-			m.Error().Msgf("oneRuntime ValueToState %s\n", err)
-			return err
-		}
+	state, err = model.ValueToState(rspState.Kvs[0].Value)
+	if err != nil {
+		m.Error().Msgf("oneRuntime ValueToState %s\n", err)
+		return err
+	}
 
+	if !failover && !param.IsCreate() {
 		m.Debug().Msgf("state:%v\n", state)
 		runtimeNode = state.RuntimeNode
 	}
