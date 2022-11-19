@@ -13,7 +13,7 @@ func mockserver() *httptest.Server {
 
 	router := gin.New()
 	router.POST("/task", func(c *gin.Context) {
-		c.JSON(200, "{}")
+		c.JSON(200, `{"code":"ok"}`)
 	})
 
 	return httptest.NewServer(http.HandlerFunc(router.ServeHTTP))

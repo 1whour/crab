@@ -2,6 +2,8 @@ package executer
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/gnh123/scheduler/model"
@@ -25,12 +27,11 @@ executer:
   `
 	var param model.Param
 	var err error
-	conf, err = modifyConfig(ts, conf)
-	assert.NoError(t, err)
-
 	err = yaml.Unmarshal([]byte(conf), &param)
 	assert.NoError(t, err)
 
+	param.Executer.Shell.Command = strings.Replace(param.Executer.Shell.Command, "127.0.0.1:8181", ts.URL, -1)
+	fmt.Printf("%v, %s\n", ts.URL, param.Executer.Shell.Command)
 	err = createShellExecuter(context.TODO(), &param).Run()
 	assert.NoError(t, err)
 }

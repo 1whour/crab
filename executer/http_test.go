@@ -2,6 +2,7 @@ package executer
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/gnh123/scheduler/model"
@@ -51,6 +52,7 @@ executer:
 		return
 	}
 
+	fmt.Printf("%s\n", ts.URL)
 	err = createHTTPExecuter(context.TODO(), &param).Run()
 	assert.NoError(t, err)
 }
