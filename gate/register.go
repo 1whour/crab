@@ -60,7 +60,7 @@ func (r *Gate) registerRuntimeWithKeepalive(runtimeName string, keepalive chan b
 
 	// 注册自己的节点信息
 	nodeName := model.FullRuntimeNode(runtimeName)
-	r.Debug().Msgf("gate.register.runtime.node:%s, host:%s\n", nodeName, r.ServerAddr)
+	r.Info().Msgf("gate.register.runtime.node:%s, host:%s\n", nodeName, r.ServerAddr)
 	_, err = defautlClient.Put(r.ctx, nodeName, r.ServerAddr, clientv3.WithLease(leaseID))
 	if err != nil {
 		r.Error().Msgf("gate.register.runtime.node %s\n", err)

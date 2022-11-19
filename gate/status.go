@@ -8,16 +8,26 @@ import (
 	"github.com/gnh123/scheduler/model"
 	"github.com/olekukonko/tablewriter"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"golang.org/x/exp/slices"
 )
+
+var title = []string{"taskName", "status", "action", "runtimeNode", "InRuntime", "createTime", "updateTime", "runtimeIP"}
 
 // 构造status数据
 // 内部使用接口， 直接返回格式化后的数据
 // 标题如下
 // taskName, status, runtimeNode, runtimeIP
 func (r *Gate) status(c *gin.Context) {
-	format := c.Param("format")
+	req := model.StatusRequest{}
+
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.String(500, err.Error())
+		return
+	}
+
 	// 目前既既支持table格式数据
-	if format == "table" {
+	if req.Format == "table" {
 
 		data := [][]string{}
 		rspState, err := defaultKVC.Get(r.ctx, model.GlobalTaskPrefixState, clientv3.WithPrefix())
@@ -27,13 +37,12 @@ func (r *Gate) status(c *gin.Context) {
 		}
 
 		for _, kv := range rspState.Kvs {
-			var d []string
 			s, err := model.ValueToState(kv.Value)
 			if err != nil {
 				c.String(500, err.Error())
 				return
 			}
-			taskName := model.TaskName(s.RuntimeNode)
+			taskName := model.TaskName(string(kv.Key))
 			ip := ""
 			if len(s.RuntimeNode) > 0 {
 				rspState, err = defaultKVC.Get(r.ctx, s.RuntimeNode)
@@ -45,15 +54,25 @@ func (r *Gate) status(c *gin.Context) {
 					ip = string(rspState.Kvs[0].Value)
 				}
 			}
-
-			d = append(d, taskName, s.State, s.Action, s.RuntimeNode, fmt.Sprintf("%t", s.InRuntime), s.CreateTime.String(), s.UpdateTime.String(), ip)
-			data = append(data, d)
+			one := []string{taskName, s.State, s.Action, s.RuntimeNode, fmt.Sprintf("%t", s.InRuntime), s.CreateTime.String(), s.UpdateTime.String(), ip}
+			if len(req.Filter) > 0 {
+				for i := 0; i < len(req.Filter) && len(req.Filter)%2 == 0; i += 2 {
+					pos := slices.Index(title, req.Filter[i])
+					if pos != -1 {
+						if req.Filter[i+1] != one[pos] {
+							goto next
+						}
+					}
+				}
+			}
+			data = append(data, one)
+		next:
 		}
 
 		var buf bytes.Buffer
 
 		table := tablewriter.NewWriter(&buf)
-		table.SetHeader([]string{"taskName", "status", "action", "runtimeNode", "InRuntime", "createTime", "updateTime", "runtimeIP"})
+		table.SetHeader(title)
 		for _, d := range data {
 			table.Append(d)
 		}

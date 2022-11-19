@@ -142,7 +142,7 @@ function check_empty_result() {
 }
 
 # 检查任务是运行的次数是否满足预期
-function create_and_check_running_count() {
+function create_and_check_http_count() {
   TASK_NAME=`uuidgen`
   create_and_check $TASK_NAME
   sleep 3
@@ -197,11 +197,27 @@ function failover_runtime() {
 # 集群被重启了
 # 需要做任务的自动恢复
 function restart_cluster_resume_task() {
-  echo ""
+  TASK_NAME=`uuidgen`
+  create_and_check $TASK_NAME
+  sleep 1
+  goreman run stop-all
+  sleep 1
+  goreman start >/dev/null &
+  sleep 3
+  # 获取运行的次数
+  CMD="curl -s -X GET -H scheduler-http-executer:$TASK_NAME $MOCK_ADDR/task"
+  # 打印命令，方便debug用的
+  echo $CMD
+  #运行命令
+  NUM=`$CMD`
+  assert_ge $NUM 2 "restart_cluster_resume_task 任务执行次数太少 $NUM"
+  assert_le $NUM 4 "restart_cluster_resume_task 任务执行次数太多 $NUM"
+  update_and_check_core $TASK_NAME "create_and_stop_check" "stop"
+
 }
 
 # 测试shell任务
-create_and_check_shell_count() {
+function create_and_check_shell_count() {
   TASK_NAME=`uuidgen`
   cp ./example/shell.yaml ./example/tmp_shell.yaml
   sed -i '' "s/TEMPLATE_VALUE/$TASK_NAME/" ./example/tmp_shell.yaml 
@@ -216,7 +232,6 @@ create_and_check_shell_count() {
   assert_ge $NUM 2 "任务执行次数太少 $NUM"
   assert_le $NUM 4 "任务执行次数太多 $NUM"
   update_and_check_core $TASK_NAME "create_and_stop_shell_check" "stop"
-
 }
 
 # 重启集群
@@ -232,7 +247,7 @@ create_and_stop_check
 create_and_check_shell_count
 
 # 测试任务是否能正确执行
-create_and_check_running_count
+create_and_check_http_count
 
  
 # 先创建，再删除。

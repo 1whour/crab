@@ -74,7 +74,7 @@ func (m *Mjobs) watchRuntimeNode() {
 	runtimeNode := defautlClient.Watch(m.ctx, model.RuntimeNodePrefix, clientv3.WithPrefix(), clientv3.WithRev(rev))
 	for ersp := range runtimeNode {
 		for _, ev := range ersp.Events {
-			m.Debug().Msgf("mjobs.runtimeNodes key(%s) value(%s) create(%t), update(%t), delete(%t)\n",
+			m.Debug().Msgf("watch mjobs.runtimeNodes key(%s) value(%s) create(%t), update(%t), delete(%t)\n",
 				string(ev.Kv.Key), string(ev.Kv.Value), ev.IsCreate(), ev.IsModify(), ev.Type == clientv3.EventTypeDelete)
 			switch {
 			case ev.IsCreate():

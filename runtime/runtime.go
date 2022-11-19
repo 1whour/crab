@@ -187,6 +187,7 @@ func (r *Runtime) createCron(param *model.Param) (err error) {
 
 	if err != nil {
 		cancel()
+		tm.Stop()
 		return err
 	}
 
