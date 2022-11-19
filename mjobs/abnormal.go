@@ -43,16 +43,24 @@ func (m *Mjobs) needRestart(state model.State) bool {
 		return true
 	}
 
-	ip, err := defaultKVC.Get(m.ctx, state.RuntimeNode)
+	var ip *clientv3.GetResponse
+	var err error
+	// runtimeNode为空
+	if len(state.RuntimeNode) == 0 {
+		goto next
+	}
+
+	ip, err = defaultKVC.Get(m.ctx, state.RuntimeNode)
 	if err != nil {
-		m.Error().Msgf("restartRunning: get ip %v\n", err)
-		return false
+		//m.Error().Msgf("restartRunning: get ip %v, key(%s)\n", err, state.RuntimeNode)
+		goto next
 	}
 
 	if (state.IsStop() || state.IsRemove()) && state.Successed == 0 && len(ip.Kvs) > 0 {
 		return true
 	}
 
+next:
 	return (state.IsCreate() || state.IsUpdate()) && len(ip.Kvs) == 0
 }
 

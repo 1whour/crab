@@ -1,5 +1,10 @@
 all: build
 
+cluster:
+	- killall scheduler
+	- rm cluster.log
+	goreman start|tee -a cluster.log
+
 build:
 	go build ./cmd/scheduler/scheduler.go
 

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"net"
 )
@@ -41,6 +42,9 @@ func GetIp() (rv string, err error) {
 	ip, err := GetIpList()
 	if err != nil {
 		return "", err
+	}
+	if len(ip) == 0 {
+		return "", errors.New("ip is empty")
 	}
 	return ip[0], nil
 }
