@@ -199,19 +199,19 @@ function failover_runtime() {
 function restart_cluster_resume_task() {
   TASK_NAME=`uuidgen`
   create_and_check $TASK_NAME
-  sleep 1
+  sleep 1.5
   goreman run stop-all
   sleep 1
   goreman start >/dev/null &
-  sleep 3
+  sleep 6 #这是异常恢复的默认时间
   # 获取运行的次数
   CMD="curl -s -X GET -H scheduler-http-executer:$TASK_NAME $MOCK_ADDR/task"
   # 打印命令，方便debug用的
   echo $CMD
   #运行命令
   NUM=`$CMD`
-  assert_ge $NUM 2 "restart_cluster_resume_task 任务执行次数太少 $NUM"
-  assert_le $NUM 4 "restart_cluster_resume_task 任务执行次数太多 $NUM"
+  assert_ge $NUM 1 "restart_cluster_resume_task 任务执行次数太少 $NUM"
+  assert_le $NUM 3 "restart_cluster_resume_task 任务执行次数太多 $NUM"
   update_and_check_core $TASK_NAME "create_and_stop_check" "stop"
 
 }
