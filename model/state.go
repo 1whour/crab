@@ -93,7 +93,9 @@ func UpdateState(value []byte, runtimeNode string, state string, action string) 
 		return nil, err
 	}
 
-	s.RuntimeNode = runtimeNode
+	if len(runtimeNode) > 0 {
+		s.RuntimeNode = runtimeNode
+	}
 	s.State = state
 	s.Action = action
 	s.UpdateTime = time.Now()

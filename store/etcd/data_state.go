@@ -106,7 +106,7 @@ func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, glo
 	return nil
 }
 
-// 更新本地队列和全局队列, 分配任务
+// 更新本地队列和全局队列, 分配任务mjobs模块调用
 func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, runtimeNode string, rsp *clientv3.GetResponse, action string) (err error) {
 
 	modRevision := rsp.Kvs[0].ModRevision
