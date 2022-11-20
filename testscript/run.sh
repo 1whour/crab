@@ -276,7 +276,9 @@ function create_and_check_shell_count() {
 }
 
 #测试关闭某个runtime，能恢复任务
-close_runtime_resume_task2
+for i in {1..5};do
+  close_runtime_resume_task2
+done
 
 # 测试gate被重启是否能恢复任务
 #close_gate_resume_task

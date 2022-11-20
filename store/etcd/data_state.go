@@ -58,7 +58,7 @@ func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, glo
 	}
 
 	if !txnRsp.Succeeded {
-		return fmt.Errorf("Transaction execution failed")
+		return fmt.Errorf("Transaction execution failed:%v", taskName)
 	}
 	return nil
 }
@@ -101,7 +101,7 @@ func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, glo
 	}
 
 	if !txnRsp.Succeeded {
-		return fmt.Errorf("Transaction execution failed")
+		return fmt.Errorf("Transaction execution failed:%s", taskName)
 	}
 	return nil
 }
@@ -177,7 +177,7 @@ func (e *EtcdStore) UpdateCallStateInner(ctx context.Context, taskName string, s
 	}
 
 	if !txnRsp.Succeeded {
-		err = errors.New("Transaction execution failed")
+		err = fmt.Errorf("Transaction execution failed, taskName:%s", taskName)
 	}
 	return
 }
