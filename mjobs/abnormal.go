@@ -102,7 +102,7 @@ func (m *Mjobs) restartRunning() {
 			}
 
 			if m.needRestart(state) {
-				m.Debug().Msgf("restartRunning, need fix %s, state\n", kv.Key, state)
+				m.Debug().Msgf("restartRunning, need fix %s, state:%v\n", kv.Key, state)
 
 				fullGlobalTask := string(kv.Key)
 				taskName := model.TaskName(fullGlobalTask)

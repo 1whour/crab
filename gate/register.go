@@ -49,8 +49,19 @@ func (r *Gate) registerGateNode() (err error) {
 	return err
 }
 
+func (r *Gate) delRuntimeNode(runtimeNode string) {
+	if len(runtimeNode) == 0 {
+		return
+	}
+	nodeName := model.FullRuntimeNode(runtimeNode)
+	_, err := defautlClient.Delete(r.ctx, nodeName)
+	if err != nil {
+		r.Error().Msgf("gate.delete.runtime.node %s\n", err)
+	}
+}
+
 // 注册runtime节点，并负责节点lease的续期
-func (r *Gate) registerRuntimeWithKeepalive(runtimeName string, keepalive chan bool) error {
+func (r *Gate) registerRuntimeWithKeepalive(runtimeNode string, keepalive chan bool) error {
 	lease, leaseID, err := utils.NewLease(r.ctx, r.Slog, defautlClient, r.LeaseTime)
 	if err != nil {
 		r.Error().Msgf("registerRuntimeWithKeepalive.NewLease fail:%s\n", err)
@@ -59,7 +70,7 @@ func (r *Gate) registerRuntimeWithKeepalive(runtimeName string, keepalive chan b
 	// 注册runtime绑定的gate
 
 	// 注册自己的节点信息
-	nodeName := model.FullRuntimeNode(runtimeName)
+	nodeName := model.FullRuntimeNode(runtimeNode)
 	r.Info().Msgf("gate.register.runtime.node:%s, host:%s\n", nodeName, r.ServerAddr)
 	_, err = defautlClient.Put(r.ctx, nodeName, r.ServerAddr, clientv3.WithLease(leaseID))
 	if err != nil {

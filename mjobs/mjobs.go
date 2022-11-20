@@ -107,7 +107,8 @@ func (m *Mjobs) oneRuntime(taskName string, param *mParam, runtimeNode string, f
 		return err
 	}
 
-	if !failover && !param.IsCreate() {
+	// 如果runtimeNode绑定好，除了出错，或者新建，会取目前绑定的runtimeNode直接使用
+	if !failover && !param.IsCreate() && !state.IsFailed() {
 		m.Debug().Msgf("state:%v\n", state)
 		runtimeNode = state.RuntimeNode
 	}
@@ -160,7 +161,9 @@ func (m *Mjobs) assignMutexWithCb(oneTask KeyVal, failover bool, cb func()) {
 	}
 	defer l.Unlock(ctx)
 
-	m.assign(oneTask, failover)
+	if err := m.assign(oneTask, failover); err != nil {
+		m.Warn().Msgf("assign err:%v\n", err)
+	}
 	if cb != nil {
 		cb()
 	}
@@ -183,31 +186,38 @@ func (m *Mjobs) selectRuntimeNode() (string, error) {
 }
 
 // 分配任务的逻辑
-func (m *Mjobs) assign(oneTask KeyVal, failover bool) {
+func (m *Mjobs) assign(oneTask KeyVal, failover bool) error {
 	m.Debug().Msgf("call assign, key:%s, state:%s\n", oneTask.key, oneTask.state.State)
 
 	kv := oneTask
 	runtimeNode, err := m.selectRuntimeNode()
 	if err != nil {
-		return
+		return err
 	}
 	// 从状态信息里面获取tastName
 	taskName := model.TaskName(kv.key)
 	if taskName == "" {
 		m.Debug().Msgf("taskName is empty, %s\n", kv.key)
-		return
+		return errors.New("taskName is empty")
 	}
 
-	m.Debug().Msgf("assign, taskName %s, action:%s\n", taskName)
+	m.Debug().Msgf("assign, taskName %s, action:%s\n", taskName, oneTask.state.Action)
 	rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTask(taskName), clientv3.WithRev(int64(oneTask.version)))
 	if err != nil {
 		m.Error().Msgf("get global task path fail:%s\n", err)
-		return
+		return err
 	}
 
 	if len(rsp.Kvs) == 0 {
 		m.Warn().Msgf("get %s value is nil\n", model.FullGlobalTask(taskName))
-		return
+		return err
+	}
+
+	// 如果是删除任务，没有在运行中的删除，直接删除
+	if oneTask.state.IsRemove() && !oneTask.state.InRuntime && !oneTask.state.IsFailed() {
+		defaultKVC.Delete(m.ctx, model.FullGlobalTask(taskName))
+		defaultKVC.Delete(m.ctx, model.FullGlobalTaskState(taskName))
+		return nil
 	}
 
 	param := mParam{}
@@ -216,13 +226,14 @@ func (m *Mjobs) assign(oneTask KeyVal, failover bool) {
 	err = json.Unmarshal(rsp.Kvs[0].Value, &param.Param)
 	if err != nil {
 		m.Error().Msgf("Unmarshal global task fail:%s\n", err)
-		return
+		return err
 	}
 
 	if err = m.setTaskToLocalrunq(taskName, &param, runtimeNode, failover); err != nil {
 		m.Error().Msgf("set task to local runq fail:%s\n", err)
-		return
+		return err
 	}
+	return nil
 }
 
 // mjobs子命令的的入口函数

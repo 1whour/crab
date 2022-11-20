@@ -52,10 +52,11 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 				// 如果是新建或者被修改过的，直接推送到客户端
 				// TODO, 成功的状态是model.Succeeded, 失败的状态是model.Failed
 				if err := utils.WriteMessageTimeout(conn, value, r.WriteTime); err != nil {
-					r.Warn().Msgf("gate.watchLocalRunq, WriteMessageTimeout :%s\n", err)
+					r.Warn().Msgf("gate.watchLocalRunq, WriteMessageTimeout :%s, runtimeName:%s bye bye\n", err, runtimeName)
 					// 更新全局状态, 修改为失败标志
 					defaultStore.UpdateCallStateFailed(r.ctx, taskName)
-					continue
+					r.delRuntimeNode(runtimeName)
+					return
 				}
 
 				if param.IsRemove() {

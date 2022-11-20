@@ -157,6 +157,7 @@ func (r *Runtime) removeFromExec(param *model.Param) error {
 	}
 	e.cancel()
 	e.tm.Stop()
+	r.Debug().Msgf("action(%s), task is remove:%s, tm:%p\n", param.Action, param.Executer.TaskName, e.tm)
 	return nil
 }
 
@@ -178,9 +179,10 @@ func (r *Runtime) createCron(param *model.Param) (err error) {
 	ctx, cancel := context.WithCancel(r.ctx)
 	tm, err := r.cron.AddFunc(param.Trigger.Cron, func() {
 		// 创建执行器
+		var err error
 		err = r.createToExec(ctx, param)
 		if err != nil {
-			r.Error().Msgf("createToExec %s\n", err)
+			r.Error().Msgf("createToExec %s, taskName:%s\n", err, param.Executer.TaskName)
 		}
 		// TODO 错误要上报到gate模块
 	})
@@ -191,6 +193,7 @@ func (r *Runtime) createCron(param *model.Param) (err error) {
 		return err
 	}
 
+	r.Debug().Msgf("createCron tm:%p, taskName:%s\n", tm, param.Executer.TaskName)
 	r.cronFunc.Store(param.Executer.TaskName, cronNode{ctx: ctx, cancel: cancel, tm: tm})
 	return nil
 }
@@ -217,8 +220,6 @@ func (r *Runtime) runCrudCmd(conn *websocket.Conn, param *model.Param) (err erro
 // 接受来自gate服务的命令, 执行并返回结果
 func (r *Runtime) readLoop(conn *websocket.Conn) error {
 
-	var param model.Param
-
 	r.Debug().Msgf("call readLoop\n")
 	go func() {
 		// 对conn执行心跳检查，conn可能长时间空闲，为是检查conn是否健康，加上心跳
@@ -233,6 +234,7 @@ func (r *Runtime) readLoop(conn *websocket.Conn) error {
 	}()
 
 	for {
+		var param model.Param
 		err := conn.ReadJSON(&param) //这里不加超时时间, 一直监听gate推过来的信息
 		if err != nil {
 			return err

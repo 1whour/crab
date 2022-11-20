@@ -88,42 +88,6 @@ func (r *Gate) getAddress() string {
 	return r.autoNewAddr()
 }
 
-func (r *Gate) stream(c *gin.Context) {
-
-	w := c.Writer
-	req := c.Request
-
-	con, err := upgrader.Upgrade(w, req, nil)
-	if err != nil {
-		r.Error().Msgf("upgrade:", err)
-		return
-	}
-	defer con.Close()
-
-	first := true
-	keepalive := make(chan bool)
-	for {
-		// 读取心跳
-		req := model.Whoami{}
-		err := con.ReadJSON(&req)
-		if err != nil {
-			r.Warn().Msgf("gate.stream.read:%s\n", err)
-			break
-		}
-
-		if first {
-			go func() {
-				r.registerRuntimeWithKeepalive(req.Name, keepalive)
-			}()
-			go r.watchLocalRunq(req.Name, con)
-			first = false
-		} else {
-			keepalive <- true
-		}
-
-	}
-}
-
 func (r *Gate) ok(c *gin.Context, msg string) {
 	r.Debug().Caller(1).Msg(msg)
 	c.JSON(200, gin.H{"code": 0, "message": ""})

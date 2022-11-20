@@ -39,31 +39,31 @@ func (p *Param) SetCreate() {
 }
 
 func (p *Param) SetRemove() {
-	p.Action = "remove"
+	p.Action = Rm
 }
 
 func (p *Param) SetStop() {
-	p.Action = "stop"
+	p.Action = Stop
 }
 
 func (p *Param) SetUpdate() {
-	p.Action = "update"
+	p.Action = Update
 }
 
 func (p *Param) IsCreate() bool {
-	return p.Action == "create"
+	return p.Action == Create
 }
 
 func (p *Param) IsRemove() bool {
-	return p.Action == "remove"
+	return p.Action == Rm
 }
 
 func (p *Param) IsStop() bool {
-	return p.Action == "stop"
+	return p.Action == Stop
 }
 
 func (p *Param) IsUpdate() bool {
-	return p.Action == "update"
+	return p.Action == Update
 }
 
 type ExecuterParam struct {

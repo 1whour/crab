@@ -38,7 +38,7 @@ function create_and_check() {
 }
 
 function delete_and_check() {
-  update_and_check_core "$1" "$2" "$3"
+  update_and_check_core "$1" "$2" "rm"
 }
 
 # 删除一个不存在的任务
@@ -60,7 +60,7 @@ function update_and_check_core() {
   if [[ -z "$ACTION" ]];then
     ACTION="rm"
   fi
-  echo "task_name($1), func_name($2) action($3)"
+  echo "task_name($TASK_NAME), func_name($FUNC_NAME) action($ACTION)"
   # 生成task name
   
   ONLY="$4"
@@ -159,7 +159,7 @@ function create_and_check_http_count() {
 
 # 检查故障转移功能
 # 集群一开始启动两个gate, 关闭有任务在运行的gate
-function failover_gate() {
+function close_gate_resume_task() {
   # 默认会起两个gate节点，先关闭gate1，那任务肯定会跑在gate2上面
   goreman run stop scheduler.gate1
   TASK_NAME=`uuidgen`
@@ -172,26 +172,67 @@ function failover_gate() {
   # 关闭gate2节点
   goreman run stop scheduler.gate2
 
-  # 检查运行次数是否满足预期
-  sleep 3
+  sleep 6
+  # 检查运行次数是否满足预期, runtime一起在运行。恢复之后把runtime里面的数据给关闭了
   # 获取运行的次数
   CMD="curl -s -X GET -H scheduler-http-executer:$TASK_NAME $MOCK_ADDR/task"
   # 打印命令，方便debug用的
-  echo $CMD
+  echo "$CMD"
   #运行命令
   NUM=`$CMD`
-  assert_ge $NUM 2 "任务执行次数太少 $NUM"
-  assert_le $NUM 4 "任务执行次数太多 $NUM"
-  update_and_check_core $TASK_NAME "failover_gate_stop" "stop"
+  assert_ge $NUM 5 "任务执行次数太少 $NUM"
+  assert_le $NUM 8 "任务执行次数太多 $NUM"
+  update_and_check_core $TASK_NAME "close_gate_resume_task" "stop"
 
   # 恢复gate2节点
   goreman run start scheduler.gate2
 }
 
+#TODO
+function close_runtime_resume_task1() {
+  close_runtime_resume_task2 true
+}
+
 # 检查故障转移功能
 # 集群一开始启动两个runtime, 关闭一个有任务的runtime
-function failover_runtime() {
-  echo ""
+function close_runtime_resume_task2() {
+  # 默认会起两个runtime节点，先关闭runtime1，那任务肯定会跑在runtime2上面
+  goreman run stop scheduler.runtime1
+  TASK_NAME=`uuidgen`
+
+  if [[ -z $1 ]];then
+    sleep 4 #runtime的keepalive是3s，这里确保任务不会写入到runtime1
+  fi
+
+  # 运行任务
+  create_and_check $TASK_NAME
+
+  # 恢复runtime1节点
+  goreman run start scheduler.runtime1
+  assert_eq $? 0 "goreman run start scheduler.runtime1 fail"
+  goreman run status
+
+  # 关闭runtime2节点
+  goreman run stop scheduler.runtime2
+  assert_eq $? 0 "goreman run stop scheduler.runtime2 fail"
+
+  sleep 4
+  # 检查运行次数是否满足预期, runtime一起在运行。恢复之后把runtime里面的数据给关闭了
+  # 获取运行的次数
+  CMD="curl -s -X GET -H scheduler-http-executer:$TASK_NAME $MOCK_ADDR/task"
+  # 打印命令，方便debug用的
+  echo "$CMD"
+  #运行命令
+  NUM=`$CMD`
+  assert_ge $NUM 1 "任务执行次数太少 $NUM"
+  assert_le $NUM 5 "任务执行次数太多 $NUM"
+  # 恢复runtime2节点
+  goreman run start scheduler.runtime2
+
+  update_and_check_core $TASK_NAME "close_runtime_resume_task" "stop"
+
+  assert_eq $? 0 "goreman run start scheduler.runtime2 fail"
+  goreman run status
 }
 
 # 集群被重启了
@@ -234,34 +275,37 @@ function create_and_check_shell_count() {
   update_and_check_core $TASK_NAME "create_and_stop_shell_check" "stop"
 }
 
-# 重启集群
-restart_cluster_resume_task
+#测试关闭某个runtime，能恢复任务
+close_runtime_resume_task2
 
 # 测试gate被重启是否能恢复任务
-#failover_gate
+#close_gate_resume_task
 
-# 先创建，再更新
-create_and_stop_check
-
-# 测试shell任务
-create_and_check_shell_count
-
-# 测试任务是否能正确执行
-create_and_check_http_count
-
- 
-# 先创建，再删除。
-create_and_delete_check
- 
-# # 先创建，再更新
-create_and_update_stop_check
-
-# 删除一个不存在的任务，etcd里面数据应该是空的
-delete_and_check `uuidgen`
-
-# 更新一个不存在的任务，etcd里面数据应该是空的
-only_update_and_check
-
-# stop一个不存在的任务，etcd里面的数据应该是空的
-only_stop_and_check
-
+# 重启集群
+#restart_cluster_resume_task
+#
+## 先创建，再更新
+#create_and_stop_check
+#
+## 测试shell任务
+#create_and_check_shell_count
+#
+## 测试任务是否能正确执行
+#create_and_check_http_count
+#
+# 
+## 先创建，再删除。
+#create_and_delete_check
+# 
+## # 先创建，再更新
+#create_and_update_stop_check
+#
+## 删除一个不存在的任务，etcd里面数据应该是空的
+#delete_and_check `uuidgen`
+#
+## 更新一个不存在的任务，etcd里面数据应该是空的
+#only_update_and_check
+#
+## stop一个不存在的任务，etcd里面的数据应该是空的
+#only_stop_and_check
+#
