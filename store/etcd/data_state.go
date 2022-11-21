@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/utils"
@@ -11,11 +12,12 @@ import (
 )
 
 // 本文件包含任务保存到etcd, 以及任务从任务队列分发到本地队列的逻辑
-
 type EtcdStore struct {
 	defaultKVC    clientv3.KV
 	defaultClient *clientv3.Client
 }
+
+const maxRetry = 3
 
 func NewStore(EtcdAddr []string) (*EtcdStore, error) {
 
@@ -58,7 +60,7 @@ func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, glo
 	}
 
 	if !txnRsp.Succeeded {
-		return fmt.Errorf("Transaction execution failed:%v", taskName)
+		return fmt.Errorf("create task??? Transaction execution failed:%v", taskName)
 	}
 	return nil
 }
@@ -69,39 +71,51 @@ func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, glo
 	globalTaskName := model.FullGlobalTask(taskName)
 	// 创建全局状态队列key名
 	globalTaskStateName := model.FullGlobalTaskState(taskName)
-	// 获取全局状态队列里面的值
-	rspState, err := e.defaultKVC.Get(ctx, globalTaskStateName)
-	if err != nil {
-		return fmt.Errorf("get.globalTaskStateName err :%w", err)
-	}
 
-	//rspModRevision := rsp.Kvs[0].ModRevision
-	rspStateModRevision := rspState.Kvs[0].ModRevision
+	for i := 0; i < maxRetry; i++ {
 
-	// 更新json中的State是CanRun
-	newValue, err := model.UpdateState(rspState.Kvs[0].Value, "", state, action)
-	if err != nil {
-		return fmt.Errorf("updateTask, onlyUpdateState(CanRun) err :%v", err)
-	}
+		// 获取全局状态队列里面的值
+		rspState, err := e.defaultKVC.Get(ctx, globalTaskStateName)
+		if err != nil {
+			return fmt.Errorf("get.globalTaskStateName err :%w", err)
+		}
 
-	// 使用事务更新
-	txn := e.defaultKVC.Txn(ctx)
-	txn.If(clientv3.Compare(clientv3.ModRevision(globalTaskName), "=", rspModRevision),
-		clientv3.Compare(clientv3.ModRevision(globalTaskStateName), "=", rspStateModRevision),
-	).
-		Then(
-			clientv3.OpPut(globalTaskName, globalData),            //更新全局队列里面的数据
-			clientv3.OpPut(globalTaskStateName, string(newValue)), //更新全局状态队列里面的状态
-		).Else()
+		//rspModRevision := rsp.Kvs[0].ModRevision
+		rspStateModRevision := rspState.Kvs[0].ModRevision
 
-	// 提交事务
-	txnRsp, err := txn.Commit()
-	if err != nil {
-		return err
-	}
+		// 更新json中的State是CanRun
+		newValue, err := model.UpdateState(rspState.Kvs[0].Value, "", state, action)
+		if err != nil {
+			return fmt.Errorf("updateTask, onlyUpdateState(CanRun) err :%v", err)
+		}
 
-	if !txnRsp.Succeeded {
-		return fmt.Errorf("Transaction execution failed:%s", taskName)
+		// 使用事务更新
+		txn := e.defaultKVC.Txn(ctx)
+		txn.If(clientv3.Compare(clientv3.ModRevision(globalTaskName), "=", rspModRevision),
+			clientv3.Compare(clientv3.ModRevision(globalTaskStateName), "=", rspStateModRevision),
+		).
+			Then(
+				clientv3.OpPut(globalTaskName, globalData),            //更新全局队列里面的数据
+				clientv3.OpPut(globalTaskStateName, string(newValue)), //更新全局状态队列里面的状态
+			).Else()
+
+		// 提交事务
+		txnRsp, err := txn.Commit()
+		if err != nil {
+			return err
+		}
+
+		// 事务失败
+		if !txnRsp.Succeeded {
+			// 最多重试三次
+			if i == maxRetry-1 {
+				return fmt.Errorf("action(%s)task, retry(%d), Transaction execution failed:%s", action, i, taskName)
+			}
+			time.Sleep(time.Millisecond * time.Duration((i + 1)))
+			continue
+		}
+		// 执行成功直接返回
+		return nil
 	}
 	return nil
 }
@@ -138,7 +152,7 @@ func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, r
 	}
 
 	if !txnRsp.Succeeded {
-		err = errors.New("Transaction execution failed")
+		err = errors.New("(updateLocalAndGlobal)Transaction execution failed")
 	}
 	return
 }
