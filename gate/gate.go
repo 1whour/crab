@@ -67,7 +67,7 @@ func (r *Gate) init() (err error) {
 	}
 
 	defaultKVC = clientv3.NewKV(defautlClient) // 内置自动重试的逻辑
-	defaultStore, err = etcd.NewStore(r.EtcdAddr)
+	defaultStore, err = etcd.NewStore(r.EtcdAddr, r.Slog, nil)
 	return err
 }
 
@@ -129,7 +129,8 @@ func (r *Gate) createTask(c *gin.Context) {
 		return
 	}
 
-	if err := defaultStore.CreateDataAndState(r.ctx, taskName, string(all)); err != nil {
+	err = defaultStore.LockCreateDataAndState(r.ctx, taskName, string(all))
+	if err != nil {
 		r.error(c, 500, err.Error())
 		return
 	}
@@ -189,7 +190,10 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 
 	taskName := req.Executer.TaskName
 
-	err = defaultStore.UpdateDataAndState(r.ctx, taskName, string(all), rsp.Kvs[0].ModRevision, model.CanRun, action)
+	err = defaultStore.LockUnlock(r.ctx, taskName, func() error {
+		return defaultStore.UpdateDataAndState(r.ctx, taskName, string(all), rsp.Kvs[0].ModRevision, model.CanRun, action)
+	})
+
 	if err != nil {
 		r.error(c, 500, err.Error())
 		return

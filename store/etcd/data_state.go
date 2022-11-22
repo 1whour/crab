@@ -2,11 +2,12 @@ package etcd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
+	"github.com/antlabs/gstl/rwmap"
 	"github.com/gnh123/scheduler/model"
+	"github.com/gnh123/scheduler/slog"
 	"github.com/gnh123/scheduler/utils"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
@@ -15,11 +16,13 @@ import (
 type EtcdStore struct {
 	defaultKVC    clientv3.KV
 	defaultClient *clientv3.Client
+	runtimeNode   *rwmap.RWMap[string, string]
+	*slog.Slog
 }
 
-const maxRetry = 3
+const maxRetry = 1
 
-func NewStore(EtcdAddr []string) (*EtcdStore, error) {
+func NewStore(EtcdAddr []string, slog *slog.Slog, runtimeNode *rwmap.RWMap[string, string]) (*EtcdStore, error) {
 
 	defautlClient, err := utils.NewEtcdClient(EtcdAddr)
 	if err != nil { //初始etcd客户端
@@ -30,6 +33,8 @@ func NewStore(EtcdAddr []string) (*EtcdStore, error) {
 	return &EtcdStore{
 		defaultKVC:    defaultKVC,
 		defaultClient: defautlClient,
+		Slog:          slog,
+		runtimeNode:   runtimeNode,
 	}, nil
 }
 
@@ -152,7 +157,12 @@ func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, r
 	}
 
 	if !txnRsp.Succeeded {
-		err = errors.New("(updateLocalAndGlobal)Transaction execution failed")
+		var state model.State
+		rspState, err := e.defaultKVC.Get(ctx, fullTaskState)
+		if err != nil {
+			state, _ = model.ValueToState(rspState.Kvs[0].Value)
+		}
+		err = fmt.Errorf("prev action(%s) , current(%v)(updateLocalAndGlobal)Transaction execution failed", action, state)
 	}
 	return
 }
@@ -162,36 +172,45 @@ func (e *EtcdStore) UpdateCallStateInner(ctx context.Context, taskName string, s
 	// 生成全局state key名
 	globalTaskState := model.ToGlobalTaskState(taskName)
 
-	// 获取state的值
-	rspState, err := e.defaultKVC.Get(ctx, globalTaskState)
-	if err != nil {
-		return err
-	}
+	for i := 0; i < maxRetry; i++ {
 
-	// 获取 修改版本号
-	modRevision := rspState.Kvs[0].ModRevision
-	fullTaskState := model.FullGlobalTaskState(taskName)
+		// 获取state的值
+		rspState, err := e.defaultKVC.Get(ctx, globalTaskState)
+		if err != nil {
+			return err
+		}
 
-	// 更新状态中的runtimeNode
-	newValue, err := model.UpdateStateAck(rspState.Kvs[0].Value, succeeded)
-	if err != nil {
-		return err
-	}
+		// 获取 修改版本号
+		modRevision := rspState.Kvs[0].ModRevision
+		fullTaskState := model.FullGlobalTaskState(taskName)
 
-	// 带事务更新
-	txn := e.defaultKVC.Txn(ctx)
-	txnRsp, err := txn.If(
-		clientv3.Compare(clientv3.ModRevision(fullTaskState), "=", modRevision),
-	).Then(
-		clientv3.OpPut(fullTaskState, string(newValue)),
-	).Commit()
+		// 更新状态中的runtimeNode
+		newValue, err := model.UpdateStateAck(rspState.Kvs[0].Value, succeeded)
+		if err != nil {
+			return err
+		}
 
-	if err != nil {
-		return err
-	}
+		// 带事务更新
+		txn := e.defaultKVC.Txn(ctx)
+		txnRsp, err := txn.If(
+			clientv3.Compare(clientv3.ModRevision(fullTaskState), "=", modRevision),
+		).Then(
+			clientv3.OpPut(fullTaskState, string(newValue)),
+		).Commit()
 
-	if !txnRsp.Succeeded {
-		err = fmt.Errorf("Transaction execution failed, taskName:%s", taskName)
+		if err != nil {
+			return err
+		}
+
+		if !txnRsp.Succeeded {
+			if i == maxRetry-1 {
+
+				return fmt.Errorf("Transaction execution failed, taskName:%s", taskName)
+			}
+			time.Sleep(time.Millisecond * time.Duration((i + 1)))
+			continue
+		}
+		return nil
 	}
 	return
 }

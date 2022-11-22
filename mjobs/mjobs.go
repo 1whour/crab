@@ -2,19 +2,15 @@ package mjobs
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"os"
-	"sync"
 	"time"
 
-	"github.com/gnh123/scheduler/model"
+	"github.com/antlabs/gstl/rwmap"
 	"github.com/gnh123/scheduler/slog"
 	"github.com/gnh123/scheduler/store/etcd"
 	"github.com/gnh123/scheduler/utils"
 	"github.com/google/uuid"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
 // Mjobs模块定位是管理jobs
@@ -33,21 +29,16 @@ type Mjobs struct {
 	*slog.Slog
 	ctx context.Context
 
-	runtimeNode sync.Map
-}
-
-type mParam struct {
-	model.Param
-	stateModRevision int
-	dataVersion      int
+	runtimeNode rwmap.RWMap[string, string]
 }
 
 var (
 	defautlClient *clientv3.Client
 	defaultKVC    clientv3.KV
-	defautlStore  *etcd.EtcdStore
+	defaultStore  *etcd.EtcdStore
 )
 
+// 初始化
 func (m *Mjobs) init() (err error) {
 
 	m.ctx = context.TODO()
@@ -61,182 +52,10 @@ func (m *Mjobs) init() (err error) {
 	}
 
 	defaultKVC = clientv3.NewKV(defautlClient) // 内置自动重试的逻辑
-	defautlStore, err = etcd.NewStore(m.EtcdAddr)
+	defaultStore, err = etcd.NewStore(m.EtcdAddr, m.Slog, &m.runtimeNode)
 	return err
 }
 
-type KeyVal struct {
-	key     string
-	val     string
-	state   model.State
-	version int
-}
-
-var createOneTask = func() []KeyVal {
-	return make([]KeyVal, 0, 100)
-}
-
-func (m *Mjobs) setTaskToLocalrunq(taskName string, param *mParam, runtimeNode string, failover bool) (err error) {
-	if param.IsOneRuntime() {
-		err = m.oneRuntime(taskName, param, runtimeNode, failover)
-	} else if param.IsBroadcast() {
-		err = m.broadcast(taskName, param)
-	} else {
-		m.Warn().Msgf("Unknown kind:%s\n", param.Kind)
-	}
-	return err
-}
-
-// 执行单机任务
-// 如果是create的任务，或者failover故障转移的任务，任选一个runtime执行
-// 如果是Stop, Delete, update 还是由原先的runtime执行
-func (m *Mjobs) oneRuntime(taskName string, param *mParam, runtimeNode string, failover bool) (err error) {
-	fullTaskState := model.FullGlobalTaskState(taskName)
-	// 获取全局队列中的状态
-	rspState, err := defaultKVC.Get(m.ctx, fullTaskState)
-	if err != nil {
-		m.Error().Msgf("oneRuntime %s\n", err)
-		return err
-	}
-
-	// 如果是更新或者删除或者stop的任务, 找到绑定的runtimeNode
-	var state model.State
-	state, err = model.ValueToState(rspState.Kvs[0].Value)
-	if err != nil {
-		m.Error().Msgf("oneRuntime ValueToState %s\n", err)
-		return err
-	}
-
-	// 如果runtimeNode绑定好，除了出错，或者新建，会取目前绑定的runtimeNode直接使用
-	if !failover && !param.IsCreate() && !state.IsFailed() {
-		m.Debug().Msgf("state:%v\n", state)
-		runtimeNode = state.RuntimeNode
-	}
-
-	if len(runtimeNode) == 0 {
-		m.Warn().Msgf("The runtimeNode is expected to be valuable\n")
-		return
-	}
-
-	if err = defautlStore.UpdateLocalAndGlobal(m.ctx, taskName, runtimeNode, rspState, state.Action); err != nil {
-		return err
-	}
-
-	// 更新状态中的值
-	m.Debug().Msgf("oneRuntime:key(%s):value(%s)\n", model.FullGlobalTaskState(taskName), runtimeNode)
-	return err
-}
-
-// 广播任务
-func (m *Mjobs) broadcast(taskName string, param *mParam) (err error) {
-	m.runtimeNode.Range(func(key, val any) bool {
-		err = m.oneRuntime(taskName, param, key.(string), false)
-		return err == nil
-	})
-
-	return err
-}
-
-// 使用分布式锁
-func (m *Mjobs) assignMutex(oneTask KeyVal, failover bool) {
-	m.assignMutexWithCb(oneTask, failover, nil)
-}
-
-func (m *Mjobs) assignMutexWithCb(oneTask KeyVal, failover bool, cb func()) {
-	mutexName := model.AssignTaskMutex(oneTask.key)
-
-	s, _ := concurrency.NewSession(defautlClient)
-	defer s.Close()
-
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*5)
-	defer cancel()
-
-	// 创建分布式锁
-	l := concurrency.NewMutex(s, mutexName)
-
-	// 获取锁失败直接返回
-	if err := l.TryLock(ctx); err != nil {
-		m.Debug().Msgf("assign trylock:%s\n", err)
-		return
-	}
-	defer l.Unlock(ctx)
-
-	if err := m.assign(oneTask, failover); err != nil {
-		m.Warn().Msgf("assign err:%v\n", err)
-	}
-	if cb != nil {
-		cb()
-	}
-}
-
-// 随机选择一个runtimeNode
-func (m *Mjobs) selectRuntimeNode() (string, error) {
-
-	var runtimeNodes []string
-	m.runtimeNode.Range(func(key, value any) bool {
-		runtimeNodes = append(runtimeNodes, key.(string))
-		return true
-	})
-
-	if len(runtimeNodes) == 0 {
-		m.Warn().Msgf("assign.runtimeNodes.size is 0\n")
-		return "", errors.New("assign.runtimeNodes.size is 0")
-	}
-	return utils.SliceRandOne(runtimeNodes), nil
-}
-
-// 分配任务的逻辑
-func (m *Mjobs) assign(oneTask KeyVal, failover bool) error {
-	m.Debug().Msgf("call assign, key:%s, state:%s\n", oneTask.key, oneTask.state.State)
-
-	kv := oneTask
-	runtimeNode, err := m.selectRuntimeNode()
-	if err != nil {
-		return err
-	}
-	// 从状态信息里面获取tastName
-	taskName := model.TaskName(kv.key)
-	if taskName == "" {
-		m.Debug().Msgf("taskName is empty, %s\n", kv.key)
-		return errors.New("taskName is empty")
-	}
-
-	m.Debug().Msgf("assign, taskName %s, action:%s\n", taskName, oneTask.state.Action)
-	rsp, err := defaultKVC.Get(m.ctx, model.FullGlobalTask(taskName), clientv3.WithRev(int64(oneTask.version)))
-	if err != nil {
-		m.Error().Msgf("get global task path fail:%s\n", err)
-		return err
-	}
-
-	if len(rsp.Kvs) == 0 {
-		m.Warn().Msgf("get %s value is nil\n", model.FullGlobalTask(taskName))
-		return err
-	}
-
-	// 如果是删除任务，没有在运行中的删除，直接删除
-	if oneTask.state.IsRemove() && !oneTask.state.InRuntime && !oneTask.state.IsFailed() {
-		defaultKVC.Delete(m.ctx, model.FullGlobalTask(taskName))
-		defaultKVC.Delete(m.ctx, model.FullGlobalTaskState(taskName))
-		return nil
-	}
-
-	param := mParam{}
-	param.stateModRevision = kv.version
-	param.dataVersion = int(rsp.Kvs[0].Version)
-	err = json.Unmarshal(rsp.Kvs[0].Value, &param.Param)
-	if err != nil {
-		m.Error().Msgf("Unmarshal global task fail:%s\n", err)
-		return err
-	}
-
-	if err = m.setTaskToLocalrunq(taskName, &param, runtimeNode, failover); err != nil {
-		m.Error().Msgf("set task to local runq fail:%s\n", err)
-		return err
-	}
-	return nil
-}
-
-// mjobs子命令的的入口函数
 func (m *Mjobs) SubMain() {
 	if err := m.init(); err != nil {
 		m.Error().Msgf("init:%s\n", err)

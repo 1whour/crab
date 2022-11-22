@@ -5,10 +5,10 @@ cluster:
 	- rm cluster.log
 	goreman start|tee -a cluster.log
 
-build:
+norace:
 	go build ./cmd/scheduler/scheduler.go
 
-build-race:
+build:
 	go build -race ./cmd/scheduler/scheduler.go
 
 test.shell:

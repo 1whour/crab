@@ -12,14 +12,18 @@ func (m *Mjobs) todoCallTask(key string, value []byte, version int) {
 		return
 	}
 
+	if state.Ack && !state.IsFailed() {
+		return
+	}
+
 	if state.IsCanRun() {
-		oneTask := KeyVal{
-			key:     key,
-			val:     string(value),
-			state:   state,
-			version: version,
+		oneTask := model.KeyVal{
+			Key:     key,
+			Val:     string(value),
+			State:   state,
+			Version: version,
 		}
-		go m.assignMutex(oneTask, false)
+		go defaultStore.AssignMutex(m.ctx, oneTask, false)
 	}
 }
 
@@ -42,10 +46,9 @@ func (m *Mjobs) watchGlobalTaskState() {
 			key := string(ev.Kv.Key)
 			version := ev.Kv.ModRevision
 
-			m.Debug().Msgf("watch create(%t) update(%t) delete(%t) global task:%s, state:%s, version:%d\n",
+			m.Debug().RawJSON("state", ev.Kv.Value).Msgf("watch create(%t) update(%t) delete(%t) global task:%s, version:%d",
 				ev.IsCreate(), ev.IsModify(), ev.Type == clientv3.EventTypeDelete,
-				ev.Kv.Key, ev.Kv.Value,
-				version)
+				ev.Kv.Key, version)
 
 			switch {
 			case ev.IsCreate(), ev.IsModify():

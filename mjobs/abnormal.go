@@ -25,7 +25,7 @@ func (m *Mjobs) failover(fullRuntime string) error {
 			continue
 		}
 
-		m.assignMutex(KeyVal{key: string(rsp.Kvs[0].Key), val: string(rsp.Kvs[0].Value)}, true)
+		defaultStore.AssignMutex(m.ctx, model.KeyVal{Key: string(rsp.Kvs[0].Key), Val: string(rsp.Kvs[0].Value)}, true)
 
 		_, err = defaultKVC.Delete(m.ctx, string(keyval.Key))
 		if err != nil {
@@ -109,13 +109,13 @@ func (m *Mjobs) restartRunning() {
 				ltaskPath := model.ToLocalTask(fullGlobalTask, taskName)
 
 				var err error
-				oneTask := KeyVal{key: string(kv.Key),
-					val:     string(kv.Value),
-					version: int(kv.ModRevision),
-					state:   state,
+				oneTask := model.KeyVal{Key: string(kv.Key),
+					Val:     string(kv.Value),
+					Version: int(kv.ModRevision),
+					State:   state,
 				}
 
-				m.assignMutexWithCb(oneTask, true, func() {
+				defaultStore.AssignMutexWithCb(m.ctx, oneTask, true, func() {
 					_, err = defaultKVC.Delete(m.ctx, ltaskPath)
 				})
 

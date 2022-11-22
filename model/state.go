@@ -28,6 +28,8 @@ type State struct {
 	CreateTime time.Time
 	//更新时间, 日志作用
 	UpdateTime time.Time
+	// ack消息标记
+	Ack bool
 }
 
 func (s State) IsCreate() bool {
@@ -81,6 +83,8 @@ func UpdateStateAck(value []byte, successed bool) ([]byte, error) {
 	} else {
 		s.State = Failed
 	}
+	// ack消费标记
+	s.Ack = true
 
 	s.UpdateTime = time.Now()
 	return json.Marshal(s)
@@ -99,6 +103,7 @@ func UpdateState(value []byte, runtimeNode string, state string, action string) 
 	s.State = state
 	s.Action = action
 	s.UpdateTime = time.Now()
+	s.Ack = false
 	return json.Marshal(&s)
 }
 

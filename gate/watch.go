@@ -54,9 +54,14 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 				if err := utils.WriteMessageTimeout(conn, value, r.WriteTime); err != nil {
 					r.Warn().Msgf("gate.watchLocalRunq, WriteMessageTimeout :%s, runtimeName:%s bye bye\n", err, runtimeName)
 					// 更新全局状态, 修改为失败标志
-					defaultStore.UpdateCallStateFailed(r.ctx, taskName)
-					r.delRuntimeNode(runtimeName)
-					return
+					defaultStore.LockUnlock(r.ctx, taskName, func() error {
+						err := defaultStore.UpdateCallStateFailed(r.ctx, taskName)
+						if err != nil {
+							return err
+						}
+						r.delRuntimeNode(runtimeName)
+						return nil
+					})
 				}
 
 				if param.IsRemove() {
@@ -65,8 +70,7 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 					defaultKVC.Delete(r.ctx, model.FullGlobalTaskState(taskName)) //删除本地队列
 				} else {
 					// 更新全局状态, 修改为成功标志
-					defaultStore.UpdateCallStateSuccessed(r.ctx, taskName)
-
+					defaultStore.LockUpdateCallStateSuccessed(r.ctx, taskName)
 				}
 			case ev.Type == clientv3.EventTypeDelete:
 				r.Debug().Msgf("delete global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)
