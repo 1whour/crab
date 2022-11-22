@@ -3,12 +3,13 @@ package etcd
 import (
 	"context"
 
+	"github.com/gnh123/scheduler/model"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-func (e *EtcdStore) LockCreateDataAndState(ctx context.Context, taskName string, globalData string) error {
+func (e *EtcdStore) LockCreateDataAndState(ctx context.Context, taskName string, req *model.Param) error {
 	return e.LockUnlock(ctx, taskName, func() error {
-		return e.CreateDataAndState(ctx, taskName, globalData)
+		return e.CreateDataAndState(ctx, taskName, req)
 	})
 
 }

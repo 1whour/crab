@@ -26,14 +26,6 @@ type Trigger struct {
 	Cron string `yaml:"cron" json:"cron" binding:"required"`
 }
 
-func (p *Param) IsOneRuntime() bool {
-	return p.Kind == "" || p.Kind == "oneRuntime"
-}
-
-func (p *Param) IsBroadcast() bool {
-	return p.Kind == "broadcast"
-}
-
 func (p *Param) SetCreate() {
 	p.Action = Create
 }

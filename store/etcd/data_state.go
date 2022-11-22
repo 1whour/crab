@@ -2,6 +2,7 @@ package etcd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -39,7 +40,12 @@ func NewStore(EtcdAddr []string, slog *slog.Slog, runtimeNode *rwmap.RWMap[strin
 }
 
 // 创建全局状态与数据队列, 仅仅保存
-func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, globalData string) error {
+func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, req *model.Param) error {
+
+	globalData, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
 
 	// 创建数据队列
 	globalTaskName := model.FullGlobalTask(taskName)
@@ -47,7 +53,7 @@ func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, glo
 	// 创建状态队列
 	globalTaskStateName := model.FullGlobalTaskState(taskName)
 	// 创建全局状态队列里面的队列
-	state, err := model.NewState()
+	state, err := model.NewState(req.Kind)
 	if err != nil {
 		return err
 	}
@@ -55,7 +61,7 @@ func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, glo
 	txn := e.defaultKVC.Txn(ctx)
 	txn.If(clientv3.Compare(clientv3.CreateRevision(globalTaskName), "=", 0)).
 		Then(
-			clientv3.OpPut(globalTaskName, globalData),
+			clientv3.OpPut(globalTaskName, string(globalData)),
 			clientv3.OpPut(globalTaskStateName, string(state)),
 		).Else()
 

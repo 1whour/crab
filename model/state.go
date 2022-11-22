@@ -30,6 +30,16 @@ type State struct {
 	UpdateTime time.Time
 	// ack消息标记
 	Ack bool
+	// 从数据字段移过来
+	Kind string
+}
+
+func (s State) IsOneRuntime() bool {
+	return s.Kind == "" || s.Kind == "oneRuntime"
+}
+
+func (s State) IsBroadcast() bool {
+	return s.Kind == "broadcast"
 }
 
 func (s State) IsCreate() bool {
@@ -61,9 +71,9 @@ func (s State) IsCanRun() bool {
 }
 
 // 创建任务时调用
-func NewState() ([]byte, error) {
+func NewState(kind string) ([]byte, error) {
 	now := time.Now()
-	return json.Marshal(&State{State: CanRun, Action: Create, CreateTime: now, UpdateTime: now})
+	return json.Marshal(&State{State: CanRun, Action: Create, CreateTime: now, UpdateTime: now, Kind: kind})
 }
 
 func UpdateStateAck(value []byte, successed bool) ([]byte, error) {

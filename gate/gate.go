@@ -123,13 +123,8 @@ func (r *Gate) createTask(c *gin.Context) {
 	}
 
 	req.SetCreate() //设置action
-	all, err := json.Marshal(req)
-	if err != nil {
-		r.error(c, 500, "marshal req:%v", err)
-		return
-	}
 
-	err = defaultStore.LockCreateDataAndState(r.ctx, taskName, string(all))
+	err = defaultStore.LockCreateDataAndState(r.ctx, taskName, &req)
 	if err != nil {
 		r.error(c, 500, err.Error())
 		return
