@@ -50,9 +50,9 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 			switch {
 			case ev.IsCreate(), ev.IsModify():
 				// 如果是新建或者被修改过的，直接推送到客户端
-				// TODO, 成功的状态是model.Succeeded, 失败的状态是model.Failed
+				// 成功的状态是model.Succeeded, 失败的状态是model.Failed
 				if err := utils.WriteMessageTimeout(conn, value, r.WriteTime); err != nil {
-					r.Warn().Msgf("gate.watchLocalRunq, WriteMessageTimeout :%s, runtimeName:%s bye bye\n", err, runtimeName)
+					r.Warn().Msgf("gate.watchLocalRunq, WriteMessageTimeout :%s, runtimeName:%s bye bye, taskName(%s)\n", err, runtimeName, taskName)
 					// 更新全局状态, 修改为失败标志
 					defaultStore.LockUnlock(r.ctx, taskName, func() error {
 						err := defaultStore.UpdateCallStateFailed(r.ctx, taskName)

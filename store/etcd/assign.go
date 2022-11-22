@@ -85,6 +85,12 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 		return err
 	}
 
+	// 如果这条任务需要被修复，在获取锁之后，还要重新获取最新状态
+	// 很有可能这个任务已经被另一个mjobs修复过
+	if failover {
+		failover = e.NeedFix(ctx, state)
+	}
+
 	if !failover {
 		if state.IsRunning() {
 			e.Debug().Msgf("Ignore:This task has been assigned, key:%s, state:%v\n", oneTask.Key, state)
@@ -93,9 +99,9 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 	}
 
 	if failover {
-		e.Debug().Caller(2).Msgf("failover(%t), call assign, key:%s, state:%s\n", oneTask.Key, state)
+		e.Debug().Caller(3).Msgf("failover(%t), call assign, key:%s, state:%v\n", failover, oneTask.Key, state)
 	} else {
-		e.Debug().Msgf("failover(%t) call assign, key:%s, state:%s\n", oneTask.Key, state)
+		e.Debug().Msgf("failover(%t) call assign, key:%s, state:%v\n", failover, oneTask.Key, state)
 	}
 	kv := oneTask
 
