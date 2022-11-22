@@ -87,11 +87,16 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 
 	if !failover {
 		if state.IsRunning() {
-			e.Debug().Msgf("This task has been assigned., key:%s, state:%s\n", oneTask.Key, oneTask.State.State)
+			e.Debug().Msgf("Ignore:This task has been assigned, key:%s, state:%v\n", oneTask.Key, state)
 			return nil
 		}
 	}
-	e.Debug().Msgf("call assign, key:%s, state:%s\n", oneTask.Key, oneTask.State.State)
+
+	if failover {
+		e.Debug().Caller(2).Msgf("failover(%t), call assign, key:%s, state:%s\n", oneTask.Key, state)
+	} else {
+		e.Debug().Msgf("failover(%t) call assign, key:%s, state:%s\n", oneTask.Key, state)
+	}
 	kv := oneTask
 
 	// 从状态信息里面获取tastName
@@ -111,7 +116,7 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 		runtimeNode = state.RuntimeNode
 	}
 
-	e.Debug().Msgf("assign, taskName %s, action:%s\n", taskName, oneTask.State.Action)
+	e.Debug().Msgf("assign, taskName %s, action:(%s)\n", taskName, oneTask.State.Action)
 	rsp, err := e.defaultKVC.Get(ctx, model.FullGlobalTask(taskName), clientv3.WithRev(int64(oneTask.Version)))
 	if err != nil {
 		e.Error().Msgf("get global task path fail:%s\n", err)

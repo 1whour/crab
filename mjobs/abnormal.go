@@ -25,12 +25,19 @@ func (m *Mjobs) failover(fullRuntime string) error {
 			continue
 		}
 
-		defaultStore.AssignMutex(m.ctx, model.KeyVal{Key: string(rsp.Kvs[0].Key), Val: string(rsp.Kvs[0].Value)}, true)
-
-		_, err = defaultKVC.Delete(m.ctx, string(keyval.Key))
+		state, err := model.ValueToState(rsp.Kvs[0].Value)
 		if err != nil {
-			m.Warn().Msgf("failover.delete fail:%s\n", err)
+			m.Warn().Msgf("failover.ValueToState fail:%s\n", err)
 			continue
+		}
+
+		if m.needRestart(state) {
+			defaultStore.AssignMutex(m.ctx, model.KeyVal{Key: string(rsp.Kvs[0].Key), Val: string(rsp.Kvs[0].Value)}, true)
+			_, err = defaultKVC.Delete(m.ctx, string(keyval.Key))
+			if err != nil {
+				m.Warn().Msgf("failover.delete fail:%s\n", err)
+				continue
+			}
 		}
 
 	}

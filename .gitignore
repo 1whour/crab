@@ -4,3 +4,4 @@ package.json
 /example/tmp_shell.yaml
 /debug.test
 /.DS_Store
+/vendor

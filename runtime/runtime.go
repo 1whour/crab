@@ -31,7 +31,8 @@ var (
 // 2. 如果是外网模式，runtime只要写一个或者多个GateAddr, 做客户的负载均衡
 // 3. 可以执行http, shell, grpc任务
 type Runtime struct {
-	cron         *cronex.Cronex
+	cron *cronex.Cronex
+	//cron         *cron.Cron
 	EtcdAddr     []string      `clop:"short;long;greedy" usage:"etcd address"`
 	GateAddr     []string      `clop:"long" usage:"endpoint address"`
 	Level        string        `clop:"short;long" usage:"log level" default:"error"`
@@ -42,7 +43,6 @@ type Runtime struct {
 
 	muWc sync.Mutex //保护多个go程写同一个conn
 
-	//exec     sync.Map
 	cronFunc rwmap.RWMap[string, cronNode]
 	addrs    rwmap.RWMap[string, string]
 }
@@ -50,7 +50,13 @@ type Runtime struct {
 type cronNode struct {
 	ctx    context.Context
 	cancel context.CancelFunc
-	tm     cronex.TimerNoder
+	//tm     cron.EntryID
+	tm cronex.TimerNoder
+}
+
+func (c *cronNode) close() {
+	c.cancel()
+	c.tm.Stop()
 }
 
 func (r *Runtime) init() (err error) {
@@ -60,6 +66,8 @@ func (r *Runtime) init() (err error) {
 		r.Name = uuid.New().String()
 	}
 
+	//r.cron = cron.New()
+	//r.cron = cron.New(cron.WithParser(cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)))
 	r.cron = cronex.New()
 	r.ctx = context.TODO()
 	r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("runtime", r.Name)
@@ -155,8 +163,7 @@ func (r *Runtime) removeFromExec(param *model.Param) error {
 	if !ok {
 		return fmt.Errorf("not found taskName:%s", param.Executer.TaskName)
 	}
-	e.cancel()
-	e.tm.Stop()
+	e.close()
 	r.Debug().Msgf("action(%s), task is remove:%s, tm:%p\n", param.Action, param.Executer.TaskName, e.tm)
 	return nil
 }
@@ -193,7 +200,12 @@ func (r *Runtime) createCron(param *model.Param) (err error) {
 		return err
 	}
 
-	r.Debug().Msgf("createCron tm:%p, taskName:%s\n", tm, param.Executer.TaskName)
+	old, ok := r.cronFunc.Load(param.Executer.TaskName)
+	if ok {
+		old.close()
+	}
+	// 按道理不应该old有值
+	r.Debug().Msgf("old(%t), createCron tm:%p, taskName:%s\n", ok, tm, param.Executer.TaskName)
 	r.cronFunc.Store(param.Executer.TaskName, cronNode{ctx: ctx, cancel: cancel, tm: tm})
 	return nil
 }
