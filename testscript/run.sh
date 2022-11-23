@@ -276,7 +276,7 @@ function create_and_check_shell_count() {
 }
 
 #测试关闭某个runtime，能恢复任务
-for i in {1..5};do
+for i in {1..500};do
   close_runtime_resume_task2
 done
 

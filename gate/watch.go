@@ -57,6 +57,7 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 					defaultStore.LockUnlock(r.ctx, taskName, func() error {
 						err := defaultStore.UpdateCallStateFailed(r.ctx, taskName)
 						if err != nil {
+							r.Error().Msgf("gate.watchLocalRunq, write failed ack fail %s, runtimeName:%s bye bye, taskName(%s)\n", err, runtimeName, taskName)
 							return err
 						}
 						r.delRuntimeNode(runtimeName)
@@ -70,7 +71,10 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 					defaultKVC.Delete(r.ctx, model.FullGlobalTaskState(taskName)) //删除本地队列
 				} else {
 					// 更新全局状态, 修改为成功标志
-					defaultStore.LockUpdateCallStateSuccessed(r.ctx, taskName)
+					if err := defaultStore.LockUpdateCallStateSuccessed(r.ctx, taskName); err != nil {
+						r.Error().Msgf("gate.watchLocalRunq, write successed ack fail %s, runtimeName:%s taskName(%s)\n", err, runtimeName, taskName)
+
+					}
 				}
 			case ev.Type == clientv3.EventTypeDelete:
 				r.Debug().Msgf("delete global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)

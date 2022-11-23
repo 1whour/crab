@@ -2,6 +2,7 @@ package etcd
 
 import (
 	"context"
+	"time"
 
 	"github.com/gnh123/scheduler/model"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -41,7 +42,11 @@ func (m *EtcdStore) NeedFix(ctx context.Context, state model.State) bool {
 		goto next
 	}
 
-	if (state.IsStop() || state.IsRemove()) && state.InRuntime && len(ip.Kvs) > 0 {
+	// 这里加上UpdateTime的原因:
+	// gate: watch任务， write socket , ack状态回写etcd
+	//                   mjobs NeedFix()
+	// 就会发现NeedFix() 会导致这个任务被重放了一遍
+	if (state.IsStop() || state.IsRemove()) && state.InRuntime && len(ip.Kvs) > 0 && time.Since(state.UpdateTime) > model.RuntimeKeepalive+1 {
 		return true
 	}
 

@@ -153,6 +153,7 @@ func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, r
 	txnRsp, err := txn.If(
 		clientv3.Compare(clientv3.ModRevision(fullTaskState), "=", modRevision),
 	).Then(
+		// 修改
 		clientv3.OpPut(fullTaskState, string(newValue)),
 		// 向本地队列写入任务, 目前本地队列的值没啥作用
 		clientv3.OpPut(ltaskPath, model.CanRun),
@@ -178,7 +179,7 @@ func (e *EtcdStore) UpdateCallStateInner(ctx context.Context, taskName string, s
 	// 生成全局state key名
 	globalTaskState := model.ToGlobalTaskState(taskName)
 
-	for i := 0; i < maxRetry; i++ {
+	for i := 0; i < 3; i++ {
 
 		// 获取state的值
 		rspState, err := e.defaultKVC.Get(ctx, globalTaskState)
@@ -201,6 +202,7 @@ func (e *EtcdStore) UpdateCallStateInner(ctx context.Context, taskName string, s
 		txnRsp, err := txn.If(
 			clientv3.Compare(clientv3.ModRevision(fullTaskState), "=", modRevision),
 		).Then(
+			// 如果全局状态
 			clientv3.OpPut(fullTaskState, string(newValue)),
 		).Commit()
 
@@ -216,6 +218,7 @@ func (e *EtcdStore) UpdateCallStateInner(ctx context.Context, taskName string, s
 			time.Sleep(time.Millisecond * time.Duration((i + 1)))
 			continue
 		}
+		e.Debug().RawJSON("state", newValue).Msgf("write to runtime ok\n")
 		return nil
 	}
 	return

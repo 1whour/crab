@@ -1,4 +1,4 @@
-package client
+package lambda
 
 type State uint8
 

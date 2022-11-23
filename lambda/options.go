@@ -1,4 +1,4 @@
-package client
+package lambda
 
 import (
 	"github.com/gnh123/scheduler/slog"

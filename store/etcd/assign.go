@@ -99,10 +99,11 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 	}
 
 	if failover {
-		e.Debug().Caller(3).Msgf("failover(%t), call assign, key:%s, state:%v\n", failover, oneTask.Key, state)
+		e.Debug().Caller(4).Msgf("failover(%t), call assign, key:%s, state:%v\n", failover, oneTask.Key, state)
 	} else {
 		e.Debug().Msgf("failover(%t) call assign, key:%s, state:%v\n", failover, oneTask.Key, state)
 	}
+
 	kv := oneTask
 
 	// 从状态信息里面获取tastName
@@ -146,8 +147,6 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 			return err
 		}
 
-		// 更新状态中的值
-		e.Debug().Msgf("oneRuntime:key(%s):value(%s)\n", model.FullGlobalTaskState(taskName), runtimeNode)
 	} else if state.IsBroadcast() {
 
 		e.runtimeNode.Range(func(key, val string) bool {
@@ -157,5 +156,8 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 	} else {
 		e.Warn().Msgf("Unknown kind:%s\n", state.Kind)
 	}
+	// 更新状态中的值
+	e.Debug().Msgf("assign bye bye: oneRuntime(%t), broadcase(%t):key(%s):value(%s)\n",
+		state.IsOneRuntime(), state.IsBroadcast(), model.FullGlobalTaskState(taskName), runtimeNode)
 	return err
 }
