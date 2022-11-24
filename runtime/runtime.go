@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/antlabs/gstl/cmp"
 	"github.com/antlabs/gstl/rwmap"
 	"github.com/gnh123/scheduler/executer"
+	"github.com/gnh123/scheduler/gatesock"
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/slog"
 	"github.com/gnh123/scheduler/utils"
@@ -45,6 +45,8 @@ type Runtime struct {
 
 	cronFunc rwmap.RWMap[string, cronNode]
 	addrs    rwmap.RWMap[string, string]
+
+	//*gatesock.GateSock
 }
 
 type cronNode struct {
@@ -143,13 +145,6 @@ func (r *Runtime) watchGateNode() {
 	panic("watchGateNode end")
 }
 
-func (r *Runtime) writeWhoami(conn *websocket.Conn) (err error) {
-	r.muWc.Lock()
-	err = utils.WriteJsonTimeout(conn, model.Whoami{Name: r.Name}, r.WriteTimeout)
-	r.muWc.Unlock()
-	return err
-}
-
 // 写回错误的结果, TODO，可能通过http返回
 func (r *Runtime) writeError(conn *websocket.Conn, to time.Duration, code int, msg string) (err error) {
 	r.muWc.Lock()
@@ -229,67 +224,6 @@ func (r *Runtime) runCrudCmd(conn *websocket.Conn, param *model.Param) (err erro
 	return err
 }
 
-// 接受来自gate服务的命令, 执行并返回结果
-func (r *Runtime) readLoop(conn *websocket.Conn) error {
-
-	r.Debug().Msgf("call readLoop\n")
-	go func() {
-		// 对conn执行心跳检查，conn可能长时间空闲，为是检查conn是否健康，加上心跳
-		for {
-			time.Sleep(model.RuntimeKeepalive)
-			if err := r.writeWhoami(conn); err != nil {
-				r.Warn().Msgf("write whoami:%s\n", err)
-				conn.Close() //关闭conn. ReadJOSN也会出错返回
-				return
-			}
-		}
-	}()
-
-	for {
-		var param model.Param
-		err := conn.ReadJSON(&param) //这里不加超时时间, 一直监听gate推过来的信息
-		if err != nil {
-			return err
-		}
-
-		go func() {
-			r.Debug().Msgf("crud action:%s, taskName:%s\n", param.Action, param.Executer.TaskName)
-			if err := r.runCrudCmd(conn, &param); err != nil {
-				r.Error().Msgf("runtime.runCrud, action(%s):%s\n", param.Action, err)
-				//r.writeError(conn, r.WriteTimeout, 1, err.Error())
-				return
-			}
-		}()
-	}
-
-}
-
-func genGateAddr(gateAddr string) string {
-	if strings.HasPrefix(gateAddr, "ws://") || strings.HasPrefix(gateAddr, "wss://") {
-		return gateAddr
-	}
-	return "ws://" + gateAddr
-}
-
-// 创建一个长连接
-func (r *Runtime) createConntion(gateAddr string) error {
-
-	gateAddr = genGateAddr(gateAddr) + model.TASK_STREAM_URL
-	c, _, err := websocket.DefaultDialer.Dial(gateAddr, nil)
-	if err != nil {
-		r.Error().Msgf("runtime:dial:%s, address:%s\n", err, gateAddr)
-		return err
-	}
-
-	defer c.Close()
-	err = utils.WriteJsonTimeout(c, model.Whoami{Name: r.Name}, r.WriteTimeout)
-	if err != nil {
-		return err
-	}
-
-	return r.readLoop(c)
-}
-
 type interval time.Duration
 
 func (i *interval) reset() {
@@ -325,7 +259,8 @@ func (r *Runtime) createConnRand() {
 
 		for i := 0; i < 2; i++ {
 
-			if err := r.createConntion(addr); err != nil {
+			gs := gatesock.New(r.Slog, r.runCrudCmd, addr, r.Name, r.WriteTimeout, &r.muWc)
+			if err := gs.CreateConntion(); err != nil {
 				// 如果握手或者上传第一个包失败，sleep 下，再重连一次
 				r.Error().Msgf("createConnection fail:%v\n", err)
 				t.sleep()

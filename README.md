@@ -65,3 +65,12 @@ executer:
     #- echo
     #- "hello"
 ```
+
+### 三、其它命令
+```bash
+scheduler start 配置文件. #创建新的dag任务，并且运行
+scheduler stop 配置文件. #停止dag任务
+scheduler rm 配置文件. #删除dag任务
+scheduler run 配置文件. #运行已存在的任务，如果不存在会返回错误
+scheduler status 获取任务的状态
+```

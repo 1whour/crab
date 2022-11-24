@@ -7,10 +7,10 @@ import (
 type Option func(o *options)
 
 type options struct {
-	Endpoint  string `json:"endpoint"`
-	Namespace string `json:"namespace"`
-	GroupId   string `json:"group_id"`
-	IP        string `json:"ip"`
+	Endpoint    string `json:"endpoint"`
+	Namespace   string `json:"namespace"`
+	GroupId     string `json:"group_id"`
+	RuntimeName string `json:"RuntimeName"`
 	*slog.Slog
 }
 
@@ -21,14 +21,8 @@ func WithEndpoint(endpoint string) Option {
 	}
 }
 
-// 设置ip
-func WithClientIP(ip string) Option {
-	return func(o *options) {
-		o.IP = ip
-	}
-}
-
-// 设置namespace, 如果有多个环境，可以用namesapce做隔离
+// 设置namespace, 如果需要有一个集团里面有所隔离，可以用namesapce区别
+// 如果没有设置值就在default组里面
 func WithNamespace(namespace string) Option {
 	return func(o *options) {
 		o.Namespace = namespace
@@ -42,9 +36,18 @@ func WithSlog(l *slog.Slog) Option {
 	}
 }
 
+// 设置runtimeName
+func WithRuntime(name string) Option {
+	return func(o *options) {
+		o.RuntimeName = name
+	}
+}
+
 // 如果有多个服务，可以用groupID做隔离
+/*
 func WithGroupID(groupID string) Option {
 	return func(o *options) {
 		o.GroupId = groupID
 	}
 }
+*/
