@@ -35,7 +35,7 @@ type Lambda struct {
 type callInfo struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
-	handler func()
+	handler Handler
 	state   State
 }
 
@@ -109,38 +109,42 @@ func getFuncName(x any) string {
 //	func (context.Context, TIn) (TOut, error)
 //
 // Where "TIn" and "TOut" are types compatible with the "encoding/json" standard library.
-func (l *Lambda) start(handler any, funcName string) {
+func (l *Lambda) start(handler any, funcName string) error {
 
 	l.Lock()
 	defer l.Unlock()
+
+	h, err := reflectHandler(handler)
+	if err != nil {
+		return err
+	}
 
 	// 初始化的时候注册，为防止重复注册比如取重名，这里直接panic
 	if _, ok := l.call[funcName]; ok {
 		panic("task name:" + funcName + ":重复注册")
 	}
 
-	//c.call[funcName] =
-	//ctx, cancel := context.WithCancel(context.TODO())
-	//c.call[funcName] = callInfo{handler: handler, ctx: ctx, cancel: cancel}
-}
-
-func (l *Lambda) StartWithName(handler any, funcName string) {
-	l.start(handler, funcName)
-}
-
-func (l *Lambda) executer(conn *websocket.Conn, param *model.Param) error {
+	l.call[funcName] = callInfo{handler: h}
 	return nil
 }
 
-func (l *Lambda) loop() {
+// 流入业务函数，自定义名字
+func (l *Lambda) StartWithName(handler any, funcName string) error {
+	return l.start(handler, funcName)
+}
+
+// 执行回调函数
+func (l *Lambda) executer(conn *websocket.Conn, param *model.Param) (payload []byte, err error) {
+	return nil, nil
+}
+
+// 注入业务函数, 函数的名字就是包名.函数名 比如main.Hello
+func (l *Lambda) Start(handler any) error {
+	return l.StartWithName(handler, getFuncName(handler))
+}
+
+// 运行
+func (l *Lambda) Run() {
 	gs := gatesock.New(l.Slog, l.executer, l.GateAddr, l.RuntimeName, l.WriteTimeout, &l.mu)
 	gs.CreateConntion()
-}
-
-func (l *Lambda) Start(handler any) {
-	l.StartWithName(handler, getFuncName(handler))
-}
-
-func (l *Lambda) Run() {
-	l.loop()
 }

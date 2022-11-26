@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Callback func(conn *websocket.Conn, param *model.Param) error
+type Callback func(conn *websocket.Conn, param *model.Param) (payload []byte, err error)
 type GateSock struct {
 	*slog.Slog
 	callback     Callback
@@ -49,12 +49,14 @@ func (g *GateSock) readLoop(conn *websocket.Conn) error {
 
 		go func() {
 			g.Debug().Msgf("crud action:%s, taskName:%s\n", param.Action, param.Executer.TaskName)
-			if err := g.callback(conn, &param); err != nil {
-				//if err := g.runCrudCmd(conn, &param); err != nil {
+			payload, err := g.callback(conn, &param)
+			if err != nil {
 				g.Error().Msgf("runtime.runCrud, action(%s):%s\n", param.Action, err)
 				//r.writeError(conn, r.WriteTimeout, 1, err.Error())
 				return
 			}
+			// TODO, 把结果回写入mysql中
+			_ = payload
 		}()
 	}
 

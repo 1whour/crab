@@ -74,3 +74,34 @@ scheduler rm 配置文件. #删除dag任务
 scheduler run 配置文件. #运行已存在的任务，如果不存在会返回错误
 scheduler status 获取任务的状态
 ```
+
+
+### 四、lambda
+lambda是自定义函数实现的一个方式
+```go
+// main.go
+//	func ()
+//	func () error
+//	func (TIn) error
+//	func () (TOut, error)
+//	func (TIn) (TOut, error)
+//	func (context.Context) error
+//	func (context.Context, TIn) error
+//	func (context.Context) (TOut, error)
+//	func (context.Context, TIn) (TOut, error)
+package main
+
+import (
+	"github.com/gnh123/scheduler/lambda"
+)
+
+func hello() (string, error) {
+	return "Hello λ!", nil
+}
+
+func main() {
+  lmd := lambda.New()
+	lmd.Start(hello)
+  lmd.Run()
+}
+```

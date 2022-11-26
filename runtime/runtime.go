@@ -153,46 +153,47 @@ func (r *Runtime) writeError(conn *websocket.Conn, to time.Duration, code int, m
 	return err
 }
 
-func (r *Runtime) removeFromExec(param *model.Param) error {
+func (r *Runtime) removeFromExec(param *model.Param) ([]byte, error) {
 	e, ok := r.cronFunc.LoadAndDelete(param.Executer.TaskName)
 	if !ok {
-		return fmt.Errorf("not found taskName:%s", param.Executer.TaskName)
+		return nil, fmt.Errorf("not found taskName:%s", param.Executer.TaskName)
 	}
 	e.close()
 	r.Debug().Msgf("action(%s), task is remove:%s, tm:%p\n", param.Action, param.Executer.TaskName, e.tm)
-	return nil
+	return nil, nil
 }
 
-func (r *Runtime) createToExec(ctx context.Context, param *model.Param) error {
+func (r *Runtime) createToExec(ctx context.Context, param *model.Param) ([]byte, error) {
 	e, err := executer.CreateExecuter(ctx, param)
 	if err != nil {
 		r.Error().Msgf("param.TaskName(%s) create fail:%s\n", param.Executer.TaskName, err)
-		return err
+		return nil, err
 	}
 
 	if err := e.Run(); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return nil, nil
 }
 
-func (r *Runtime) createCron(param *model.Param) (err error) {
+func (r *Runtime) createCron(param *model.Param) (b []byte, err error) {
 
 	ctx, cancel := context.WithCancel(r.ctx)
 	tm, err := r.cron.AddFunc(param.Trigger.Cron, func() {
 		// 创建执行器
-		var err error
-		err = r.createToExec(ctx, param)
+		payload, err := r.createToExec(ctx, param)
 		if err != nil {
 			r.Error().Msgf("createToExec %s, taskName:%s\n", err, param.Executer.TaskName)
 		}
 		// TODO 错误要上报到gate模块
+		// TODO payload
+		_ = payload
 	})
 
 	if err != nil {
 		cancel()
 		tm.Stop()
-		return err
+		return nil, err
 	}
 
 	old, ok := r.cronFunc.Load(param.Executer.TaskName)
@@ -202,10 +203,10 @@ func (r *Runtime) createCron(param *model.Param) (err error) {
 	// 按道理不应该old有值
 	r.Debug().Msgf("old(%t), createCron tm:%p, taskName:%s\n", ok, tm, param.Executer.TaskName)
 	r.cronFunc.Store(param.Executer.TaskName, cronNode{ctx: ctx, cancel: cancel, tm: tm})
-	return nil
+	return nil, nil
 }
 
-func (r *Runtime) runCrudCmd(conn *websocket.Conn, param *model.Param) (err error) {
+func (r *Runtime) runCrudCmd(conn *websocket.Conn, param *model.Param) (payload []byte, err error) {
 
 	switch {
 	case param.IsCreate():
@@ -213,15 +214,15 @@ func (r *Runtime) runCrudCmd(conn *websocket.Conn, param *model.Param) (err erro
 
 	case param.IsRemove(), param.IsStop():
 		// 删除和stop对于runtime是一样，停止当前运行的，然后从sync.Map删除
-		err = r.removeFromExec(param)
+		payload, err = r.removeFromExec(param)
 	case param.IsUpdate():
 		// 先删除
-		if err = r.removeFromExec(param); err != nil {
-			return err
+		if payload, err = r.removeFromExec(param); err != nil {
+			return payload, err
 		}
-		err = r.createCron(param)
+		payload, err = r.createCron(param)
 	}
-	return err
+	return payload, err
 }
 
 type interval time.Duration
