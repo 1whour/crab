@@ -1,12 +1,14 @@
 package lambda
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"runtime"
 	"sync"
 	"time"
 
+	"github.com/antlabs/gstl/rwmap"
 	"github.com/gnh123/scheduler/gatesock"
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/slog"
@@ -23,8 +25,7 @@ const (
 // 客户端
 type Lambda struct {
 	options
-	call map[string]callInfo
-	sync.RWMutex
+	call rwmap.RWMap[string, callInfo]
 	sync.Once
 	GateAddr     string `clop:"short;long" usage:"gate addr"`
 	WriteTimeout time.Duration
@@ -52,31 +53,6 @@ func New(opts ...Option) (*Lambda, error) {
 	}
 
 	return c, nil
-}
-
-// 运行handler的函数
-func (c *Lambda) run() {
-	var req model.Param
-
-	c.Lock()
-	call, ok := c.call[req.Executer.TaskName]
-	if !ok { // 不存在
-		c.Unlock()
-		return
-	}
-
-	c.Unlock()
-
-	// 执行handler
-	//call.handler(context.TODO())
-
-	c.Lock()
-
-	call.state = Unused
-	c.call[req.Executer.TaskName] = call
-
-	call.cancel() //排掉
-	c.Unlock()
 }
 
 // 取消现在运行中的函数
@@ -111,20 +87,17 @@ func getFuncName(x any) string {
 // Where "TIn" and "TOut" are types compatible with the "encoding/json" standard library.
 func (l *Lambda) start(handler any, funcName string) error {
 
-	l.Lock()
-	defer l.Unlock()
-
 	h, err := reflectHandler(handler)
 	if err != nil {
 		return err
 	}
 
-	// 初始化的时候注册，为防止重复注册比如取重名，这里直接panic
-	if _, ok := l.call[funcName]; ok {
+	_, ok := l.call.LoadOrStore(funcName, callInfo{handler: h})
+	if ok {
+		// 初始化的时候注册，为防止重复注册比如取重名，这里直接panic
 		panic("task name:" + funcName + ":重复注册")
 	}
 
-	l.call[funcName] = callInfo{handler: h}
 	return nil
 }
 
@@ -135,7 +108,23 @@ func (l *Lambda) StartWithName(handler any, funcName string) error {
 
 // 执行回调函数
 func (l *Lambda) executer(conn *websocket.Conn, param *model.Param) (payload []byte, err error) {
-	//l.call[]
+	if param.Executer.TaskName != l.RuntimeName {
+		return nil, fmt.Errorf("taskName:%s != l.RuntimeName:%s", param.Executer.TaskName, l.RuntimeName)
+	}
+
+	if param.Executer.Lambda == nil {
+		return nil, fmt.Errorf("lambda is nil ???")
+	}
+
+	for _, f := range param.Executer.Lambda.Funcs {
+		call, ok := l.call.Load(f.Name)
+		if !ok {
+			l.Warn().Msgf("func.name:%s is not found\n", f.Name)
+			continue
+		}
+		call.handler(f.Args)
+	}
+
 	return nil, nil
 }
 

@@ -59,10 +59,12 @@ func (p *Param) IsUpdate() bool {
 }
 
 type ExecuterParam struct {
-	TaskName string `yaml:"taskName" json:"taskName" binding:"required"` //自定义执行器，需要给到TaskName
-	HTTP     *HTTP  `yaml:"http" json:"http"`                            //http包
-	Shell    *Shell `yaml:"shell" json:"shell"`                          //shell包
-	Grpc     *Grpc  `yaml:"grpc" json:"grpc"`                            //grpc
+	TaskName  string  `yaml:"taskName" json:"taskName" binding:"required"` //自定义执行器，需要给到TaskName
+	GroupName string  `yaml:"groupName" json:"groupName"`                  //TODO, 还没想好
+	HTTP      *HTTP   `yaml:"http" json:"http"`                            //http包
+	Shell     *Shell  `yaml:"shell" json:"shell"`                          //shell包
+	Grpc      *Grpc   `yaml:"grpc" json:"grpc"`                            //grpc
+	Lambda    *Lambda `yaml:"lambda" json:"lambda"`                        //lambda
 }
 
 // 判断是通用执行器
@@ -70,6 +72,7 @@ func (p ExecuterParam) IsGeneral() bool {
 	return p.HTTP != nil || p.Shell != nil || p.Grpc != nil
 }
 
+// name
 func (p ExecuterParam) Name() string {
 	if p.HTTP != nil {
 		return "http"

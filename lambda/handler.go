@@ -23,12 +23,6 @@ func (h bytesHandlerFunc) Invoke(ctx context.Context, payload []byte) ([]byte, e
 	return h(ctx, payload)
 }
 
-func errorHandler(err error) Handler {
-	return bytesHandlerFunc(func(_ context.Context, _ []byte) ([]byte, error) {
-		return nil, err
-	})
-}
-
 //	func ()
 //	func () error
 //	func (TIn) error

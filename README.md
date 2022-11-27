@@ -85,8 +85,9 @@ trigger:
   cron: "* * * * * *"
 executer:
   lambda:
-    - funcName: hello
-      args: 
+    func:
+    - Name: hello
+      args: ""
 
 ```
 
@@ -114,7 +115,7 @@ func hello() (string, error) {
 
 func main() {
   lmd := lambda.New()
-	lmd.Start(hello)
+  lmd.Start(hello)
   lmd.Run()
 }
 ```
