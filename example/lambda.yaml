@@ -1,0 +1,9 @@
+apiVersion: v0.0.1 #api版本号
+kind: oneRuntime #只在一个runtime上运行
+trigger:
+  cron: "* * * * * *"
+executer:
+  lambda:
+    - funcName: hello
+      args: |
+        {"a":"b"}

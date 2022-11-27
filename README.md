@@ -77,7 +77,20 @@ scheduler status 获取任务的状态
 
 
 ### 四、lambda
-lambda是自定义函数实现的一个方式
+#### 4.1 新建lambda配置
+```yaml
+apiVersion: v0.0.1 #api版本号
+kind: oneRuntime #只在一个runtime上运行
+trigger:
+  cron: "* * * * * *"
+executer:
+  lambda:
+    - funcName: hello
+      args: 
+
+```
+
+#### 4.2 自定义lambda实现
 ```go
 // main.go
 //	func ()
@@ -104,4 +117,9 @@ func main() {
 	lmd.Start(hello)
   lmd.Run()
 }
+```
+
+#### 4.3 保存至scheduler
+```yaml
+scheduler start ./example/lambda.yaml
 ```
