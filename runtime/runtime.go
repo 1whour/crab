@@ -31,8 +31,7 @@ var (
 // 2. 如果是外网模式，runtime只要写一个或者多个GateAddr, 做客户的负载均衡
 // 3. 可以执行http, shell, grpc任务
 type Runtime struct {
-	cron *cronex.Cronex
-	//cron         *cron.Cron
+	cron         *cronex.Cronex
 	EtcdAddr     []string      `clop:"short;long;greedy" usage:"etcd address"`
 	GateAddr     []string      `clop:"long" usage:"endpoint address"`
 	Level        string        `clop:"short;long" usage:"log level" default:"error"`
@@ -68,8 +67,6 @@ func (r *Runtime) init() (err error) {
 		r.Name = uuid.New().String()
 	}
 
-	//r.cron = cron.New()
-	//r.cron = cron.New(cron.WithParser(cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)))
 	r.cron = cronex.New()
 	r.ctx = context.TODO()
 	r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("runtime", r.Name)

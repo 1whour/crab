@@ -135,6 +135,7 @@ func (l *Lambda) StartWithName(handler any, funcName string) error {
 
 // 执行回调函数
 func (l *Lambda) executer(conn *websocket.Conn, param *model.Param) (payload []byte, err error) {
+	//l.call[]
 	return nil, nil
 }
 

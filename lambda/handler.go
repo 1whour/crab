@@ -22,6 +22,7 @@ type bytesHandlerFunc func(context.Context, []byte) ([]byte, error)
 func (h bytesHandlerFunc) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
 	return h(ctx, payload)
 }
+
 func errorHandler(err error) Handler {
 	return bytesHandlerFunc(func(_ context.Context, _ []byte) ([]byte, error) {
 		return nil, err

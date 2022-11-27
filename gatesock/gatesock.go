@@ -12,6 +12,7 @@ import (
 )
 
 type Callback func(conn *websocket.Conn, param *model.Param) (payload []byte, err error)
+
 type GateSock struct {
 	*slog.Slog
 	callback     Callback
