@@ -73,7 +73,7 @@ func genGateAddr(gateAddr string) string {
 
 func (g *GateSock) writeWhoami(conn *websocket.Conn) (err error) {
 	g.mu.Lock()
-	err = utils.WriteJsonTimeout(conn, model.Whoami{Name: g.name}, g.writeTimeout)
+	err = utils.WriteJsonTimeout(conn, model.Whoami{Name: g.name, Lambda: g.lambda}, g.writeTimeout)
 	g.mu.Unlock()
 	return err
 }
@@ -89,8 +89,8 @@ func (g *GateSock) CreateConntion() error {
 	}
 
 	defer c.Close()
-	err = utils.WriteJsonTimeout(c, model.Whoami{Name: g.name}, g.writeTimeout)
-	if err != nil {
+
+	if err := g.writeWhoami(c); err != nil {
 		return err
 	}
 
