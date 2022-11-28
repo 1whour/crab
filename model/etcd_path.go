@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-var (
+const (
 	//gate模块在etcd注册的node信息, 作用是
 	// 在内网模式，让runtime发现gate
 	// val是ip
@@ -24,6 +24,11 @@ var (
 	//注册的runtime节点信息, 路径后面是runtimeName
 	RuntimeNodePrefix = "/scheduler/v1/runtime"
 
+	LambdaKey = "lambda"
+
+	//注册的runtime节点信息, 路径后面是runtimeName
+	RuntimeNodeLambdaPrefix = "/scheduler/v1/runtime/lambda"
+
 	//分配task用的分布式锁
 	AssignTaskMutexPrefix = "/scheduler/v1/task/assign/mutex"
 )
@@ -39,11 +44,6 @@ func WatchLocalRuntimePrefix(runtimeName string) string {
 	return fmt.Sprintf("%s/%s", LocalRuntimeTaskPrefix, runtimeName)
 }
 
-// 生成本地任务队列全路径
-func fullLocalRuntimeTask(runtimeName, taskName string) string {
-	return fmt.Sprintf("%s/%s/%s", LocalRuntimeTaskPrefix, runtimeName, taskName)
-}
-
 // runtimeNode转成本地队列前缀 路径
 func ToLocalTaskPrefix(fullRuntimeName string) string {
 	runtimeName := takeNameFromPath(fullRuntimeName)
@@ -53,7 +53,8 @@ func ToLocalTaskPrefix(fullRuntimeName string) string {
 // runtimeNode转成本地队列
 func ToLocalTask(fullRuntimeName, taskName string) string {
 	runtimeName := takeNameFromPath(fullRuntimeName)
-	return fullLocalRuntimeTask(runtimeName, taskName)
+	return fmt.Sprintf("%s/%s/%s", LocalRuntimeTaskPrefix, runtimeName, taskName)
+
 }
 
 // 转成全局队列

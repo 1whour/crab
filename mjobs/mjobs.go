@@ -30,6 +30,7 @@ type Mjobs struct {
 	ctx context.Context
 
 	runtimeNode rwmap.RWMap[string, string]
+	lambdaNode  rwmap.RWMap[string, string]
 }
 
 var (
@@ -52,7 +53,7 @@ func (m *Mjobs) init() (err error) {
 	}
 
 	defaultKVC = clientv3.NewKV(defautlClient) // 内置自动重试的逻辑
-	defaultStore, err = etcd.NewStore(m.EtcdAddr, m.Slog, &m.runtimeNode)
+	defaultStore, err = etcd.NewStore(m.EtcdAddr, m.Slog, &m.runtimeNode, &m.lambdaNode)
 	return err
 }
 

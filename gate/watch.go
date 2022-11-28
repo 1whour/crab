@@ -2,6 +2,7 @@ package gate
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/utils"
@@ -60,7 +61,7 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 							r.Error().Msgf("gate.watchLocalRunq, write failed ack fail %s, runtimeName:%s bye bye, taskName(%s)\n", err, runtimeName, taskName)
 							return err
 						}
-						r.delRuntimeNode(runtimeName)
+						r.delRuntimeNode(model.Whoami{Name: runtimeName, Lambda: strings.Contains(localKey, model.LambdaKey)})
 						return nil
 					})
 				}

@@ -2,7 +2,8 @@ package model
 
 // runtime连接到gate，第一个包推带节点名
 type Whoami struct {
-	Name string `json:"name"`
+	Name   string `json:"name"`
+	Lambda bool   `json:"lambda"`
 }
 
 // TODO: 通过http接口返回

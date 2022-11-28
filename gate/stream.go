@@ -24,14 +24,14 @@ func (r *Gate) stream(c *gin.Context) {
 		req := model.Whoami{}
 		err := con.ReadJSON(&req)
 		if err != nil {
-			r.delRuntimeNode(runtimeNode)
+			r.delRuntimeNode(req)
 			r.Warn().Msgf("gate.stream.read:%s\n", err)
 			break
 		}
 
 		if runtimeNode == "" {
 			go func() {
-				r.registerRuntimeWithKeepalive(req.Name, keepalive)
+				r.registerRuntimeWithKeepalive(req, keepalive)
 			}()
 			go r.watchLocalRunq(req.Name, con)
 			runtimeNode = req.Name

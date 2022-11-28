@@ -8,6 +8,11 @@ func FullGateNode(name string) string {
 }
 
 // 生成runtime node的信息
-func FullRuntimeNode(runtimeName string) string {
+func FullRuntimeNode(who Whoami) string {
+	runtimeName := who.Name
+	if who.Lambda {
+		return fmt.Sprintf("%s/%s", RuntimeNodeLambdaPrefix, runtimeName)
+
+	}
 	return fmt.Sprintf("%s/%s", RuntimeNodePrefix, runtimeName)
 }

@@ -67,7 +67,7 @@ func (r *Gate) init() (err error) {
 	}
 
 	defaultKVC = clientv3.NewKV(defautlClient) // 内置自动重试的逻辑
-	defaultStore, err = etcd.NewStore(r.EtcdAddr, r.Slog, nil)
+	defaultStore, err = etcd.NewStore(r.EtcdAddr, r.Slog, nil, nil)
 	return err
 }
 
@@ -185,6 +185,7 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 
 	taskName := req.Executer.TaskName
 
+	// TODO 换成带lock的API
 	err = defaultStore.LockUnlock(r.ctx, taskName, func() error {
 		return defaultStore.UpdateDataAndState(r.ctx, taskName, string(all), rsp.Kvs[0].ModRevision, model.CanRun, action)
 	})

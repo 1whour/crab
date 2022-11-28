@@ -32,6 +32,8 @@ type State struct {
 	Ack bool
 	// 从数据字段移过来
 	Kind string
+	// 是否是Lambda函数，必须要绑定
+	Lambda bool
 }
 
 func (s State) IsOneRuntime() bool {

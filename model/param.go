@@ -26,6 +26,10 @@ type Trigger struct {
 	Cron string `yaml:"cron" json:"cron" binding:"required"`
 }
 
+func (p *Param) IsLambda() bool {
+	return p.Executer.Lambda != nil && p.Executer.Lambda.Funcs != nil
+}
+
 func (p *Param) SetCreate() {
 	p.Action = Create
 }

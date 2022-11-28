@@ -18,12 +18,13 @@ type EtcdStore struct {
 	defaultKVC    clientv3.KV
 	defaultClient *clientv3.Client
 	runtimeNode   *rwmap.RWMap[string, string]
+	lambdaNode    *rwmap.RWMap[string, string]
 	*slog.Slog
 }
 
 const maxRetry = 1
 
-func NewStore(EtcdAddr []string, slog *slog.Slog, runtimeNode *rwmap.RWMap[string, string]) (*EtcdStore, error) {
+func NewStore(EtcdAddr []string, slog *slog.Slog, runtimeNode, lambdaNode *rwmap.RWMap[string, string]) (*EtcdStore, error) {
 
 	defautlClient, err := utils.NewEtcdClient(EtcdAddr)
 	if err != nil { //初始etcd客户端
@@ -36,6 +37,7 @@ func NewStore(EtcdAddr []string, slog *slog.Slog, runtimeNode *rwmap.RWMap[strin
 		defaultClient: defautlClient,
 		Slog:          slog,
 		runtimeNode:   runtimeNode,
+		lambdaNode:    lambdaNode,
 	}, nil
 }
 

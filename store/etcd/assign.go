@@ -13,11 +13,19 @@ import (
 
 // mjobs子命令的的入口函数
 // 随机选择一个runtimeNode
-func (e *EtcdStore) selectRuntimeNode() (string, error) {
+func (e *EtcdStore) selectRuntimeNode(state model.State) (string, error) {
 
-	if e.runtimeNode.Len() == 0 {
+	if !state.Lambda && e.runtimeNode.Len() == 0 {
 		e.Warn().Msgf("assign.runtimeNodes.size is 0\n")
 		return "", errors.New("assign.runtimeNodes.size is 0")
+	}
+
+	if state.Lambda {
+
+		if e.lambdaNode.Len() == 0 {
+			return "", errors.New("assign.lambdaNodes.size is 0")
+		}
+
 	}
 
 	runtimeNodes := e.runtimeNode.Keys()
@@ -113,7 +121,8 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 		return errors.New("taskName is empty")
 	}
 
-	runtimeNode, err := e.selectRuntimeNode()
+	// TODO 如果选出的runtimeNode和出错runtimeNode一样，需要重新选择
+	runtimeNode, err := e.selectRuntimeNode(state)
 	if err != nil {
 		return err
 	}
