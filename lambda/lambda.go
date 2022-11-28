@@ -59,12 +59,10 @@ func New(opts ...Option) (*Lambda, error) {
 func (c *Lambda) cancel() {
 	var req model.Param
 
-	c.Lock()
-	defer c.Unlock()
-	call := c.call[req.Executer.TaskName]
+	call, ok := c.call.Load(req.Executer.TaskName)
 
 	// 利用cancel取消正在运行中的task
-	if call.state == Running {
+	if ok && call.state == Running {
 		call.cancel()
 	}
 }
@@ -122,7 +120,13 @@ func (l *Lambda) executer(conn *websocket.Conn, param *model.Param) (payload []b
 			l.Warn().Msgf("func.name:%s is not found\n", f.Name)
 			continue
 		}
-		call.handler(f.Args)
+
+		rsp, err := call.handler.Invoke(call.ctx, []byte(f.Args))
+		if err != nil {
+			l.Warn().Msgf("call handler fail:%s\n", err)
+			continue
+		}
+		_ = rsp
 	}
 
 	return nil, nil
