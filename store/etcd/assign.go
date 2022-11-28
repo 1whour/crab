@@ -15,20 +15,22 @@ import (
 // 随机选择一个runtimeNode
 func (e *EtcdStore) selectRuntimeNode(state model.State) (string, error) {
 
-	if !state.Lambda && e.runtimeNode.Len() == 0 {
+	if !state.Lambda && e.RuntimeNode.RuntimeNode.Len() == 0 {
 		e.Warn().Msgf("assign.runtimeNodes.size is 0\n")
 		return "", errors.New("assign.runtimeNodes.size is 0")
 	}
 
 	if state.Lambda {
 
-		if e.lambdaNode.Len() == 0 {
+		if e.LambdaNode.Len() == 0 {
 			return "", errors.New("assign.lambdaNodes.size is 0")
 		}
 
+		// TODO
+		e.RuntimeNode.LambdaNode.Keys()
 	}
 
-	runtimeNodes := e.runtimeNode.Keys()
+	runtimeNodes := e.RuntimeNode.RuntimeNode.Keys()
 
 	return utils.SliceRandOne(runtimeNodes), nil
 }
@@ -158,7 +160,7 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 
 	} else if state.IsBroadcast() {
 
-		e.runtimeNode.Range(func(key, val string) bool {
+		e.RuntimeNode.RuntimeNode.Range(func(key, val string) bool {
 			err = e.UpdateLocalAndGlobal(ctx, taskName, runtimeNode, rspState, state.Action)
 			return err == nil
 		})

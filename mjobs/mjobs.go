@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/antlabs/gstl/rwmap"
+	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/slog"
 	"github.com/gnh123/scheduler/store/etcd"
 	"github.com/gnh123/scheduler/utils"
@@ -29,8 +29,7 @@ type Mjobs struct {
 	*slog.Slog
 	ctx context.Context
 
-	runtimeNode rwmap.RWMap[string, string]
-	lambdaNode  rwmap.RWMap[string, string]
+	runtimeNode model.RuntimeNode
 }
 
 var (
@@ -53,7 +52,7 @@ func (m *Mjobs) init() (err error) {
 	}
 
 	defaultKVC = clientv3.NewKV(defautlClient) // 内置自动重试的逻辑
-	defaultStore, err = etcd.NewStore(m.EtcdAddr, m.Slog, &m.runtimeNode, &m.lambdaNode)
+	defaultStore, err = etcd.NewStore(m.EtcdAddr, m.Slog, &m.runtimeNode)
 	return err
 }
 

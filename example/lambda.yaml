@@ -4,6 +4,7 @@ trigger:
   cron: "* * * * * *"
 executer:
   lambda:
-    - funcName: hello
-      args: |
+    func:
+    - Name: main.hello
+      Args: |
         {"a":"b"}

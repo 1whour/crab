@@ -73,9 +73,9 @@ func (s State) IsCanRun() bool {
 }
 
 // 创建任务时调用
-func NewState(kind string) ([]byte, error) {
+func NewState(kind string, lambda bool) ([]byte, error) {
 	now := time.Now()
-	return json.Marshal(&State{State: CanRun, Action: Create, CreateTime: now, UpdateTime: now, Kind: kind})
+	return json.Marshal(&State{State: CanRun, Action: Create, CreateTime: now, UpdateTime: now, Kind: kind, Lambda: lambda})
 }
 
 func UpdateStateAck(value []byte, successed bool) ([]byte, error) {

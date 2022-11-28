@@ -67,7 +67,7 @@ func (r *Gate) init() (err error) {
 	}
 
 	defaultKVC = clientv3.NewKV(defautlClient) // 内置自动重试的逻辑
-	defaultStore, err = etcd.NewStore(r.EtcdAddr, r.Slog, nil, nil)
+	defaultStore, err = etcd.NewStore(r.EtcdAddr, r.Slog, nil)
 	return err
 }
 
