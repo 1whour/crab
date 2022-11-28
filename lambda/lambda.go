@@ -27,7 +27,7 @@ type Lambda struct {
 	options
 	call rwmap.RWMap[string, callInfo]
 	sync.Once
-	GateAddr     string `clop:"short;long" usage:"gate addr"`
+	GateAddr     string
 	WriteTimeout time.Duration
 	mu           sync.Mutex
 }
@@ -106,8 +106,8 @@ func (l *Lambda) StartWithName(handler any, funcName string) error {
 
 // 执行回调函数
 func (l *Lambda) executer(conn *websocket.Conn, param *model.Param) (payload []byte, err error) {
-	if param.Executer.TaskName != l.RuntimeName {
-		return nil, fmt.Errorf("taskName:%s != l.RuntimeName:%s", param.Executer.TaskName, l.RuntimeName)
+	if param.Executer.TaskName != l.TaskName {
+		return nil, fmt.Errorf("taskName:%s != l.TaskName:%s", param.Executer.TaskName, l.TaskName)
 	}
 
 	if param.Executer.Lambda == nil {
@@ -141,6 +141,6 @@ func (l *Lambda) Start(handler any) error {
 
 // 运行
 func (l *Lambda) Run() {
-	gs := gatesock.New(l.Slog, l.executer, l.GateAddr, l.RuntimeName, l.WriteTimeout, &l.mu)
+	gs := gatesock.New(l.Slog, l.executer, l.GateAddr, l.TaskName, l.WriteTimeout, &l.mu)
 	gs.CreateConntion()
 }

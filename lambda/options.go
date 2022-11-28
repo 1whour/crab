@@ -7,10 +7,10 @@ import (
 type Option func(o *options)
 
 type options struct {
-	Endpoint    string `json:"endpoint"`
-	Namespace   string `json:"namespace"`
-	GroupId     string `json:"group_id"`
-	RuntimeName string `json:"RuntimeName"`
+	Endpoint  string `json:"endpoint"`
+	Namespace string `json:"namespace"`
+	GroupId   string `json:"group_id"`
+	TaskName  string `json:"TaskName"`
 	*slog.Slog
 }
 
@@ -37,9 +37,9 @@ func WithSlog(l *slog.Slog) Option {
 }
 
 // 设置runtimeName
-func WithRuntime(name string) Option {
+func WithTaskName(name string) Option {
 	return func(o *options) {
-		o.RuntimeName = name
+		o.TaskName = name
 	}
 }
 
