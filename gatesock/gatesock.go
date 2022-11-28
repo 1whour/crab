@@ -19,11 +19,12 @@ type GateSock struct {
 	gateAddr     string
 	name         string
 	writeTimeout time.Duration
+	lambda       bool
 	mu           *sync.Mutex
 }
 
-func New(slog *slog.Slog, cb Callback, gateAddr string, name string, writeTimeout time.Duration, mu *sync.Mutex) *GateSock {
-	return &GateSock{Slog: slog, callback: cb, gateAddr: gateAddr, name: name, writeTimeout: writeTimeout, mu: mu}
+func New(slog *slog.Slog, cb Callback, gateAddr string, name string, writeTimeout time.Duration, mu *sync.Mutex, lambda bool) *GateSock {
+	return &GateSock{Slog: slog, callback: cb, gateAddr: gateAddr, name: name, writeTimeout: writeTimeout, mu: mu, lambda: lambda}
 }
 
 // 接受来自gate服务的命令, 执行并返回结果

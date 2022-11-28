@@ -257,7 +257,7 @@ func (r *Runtime) createConnRand() {
 
 		for i := 0; i < 2; i++ {
 			r.Debug().Msgf("# addr is %s", addr)
-			gs := gatesock.New(r.Slog, r.runCrudCmd, addr, r.Name, r.WriteTimeout, &r.muWc)
+			gs := gatesock.New(r.Slog, r.runCrudCmd, addr, r.Name, r.WriteTimeout, &r.muWc, false)
 			if err := gs.CreateConntion(); err != nil {
 				// 如果握手或者上传第一个包失败，sleep 下，再重连一次
 				r.Error().Msgf("createConnection fail:%v\n", err)

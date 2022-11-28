@@ -145,6 +145,6 @@ func (l *Lambda) Start(handler any) error {
 
 // 运行
 func (l *Lambda) Run() error {
-	gs := gatesock.New(l.Slog, l.executer, l.Endpoint, l.TaskName, l.WriteTimeout, &l.mu)
+	gs := gatesock.New(l.Slog, l.executer, l.Endpoint, l.TaskName, l.WriteTimeout, &l.mu, true)
 	return gs.CreateConntion()
 }
