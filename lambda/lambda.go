@@ -27,7 +27,6 @@ type Lambda struct {
 	options
 	call rwmap.RWMap[string, callInfo]
 	sync.Once
-	GateAddr     string
 	WriteTimeout time.Duration
 	mu           sync.Mutex
 }
@@ -141,6 +140,6 @@ func (l *Lambda) Start(handler any) error {
 
 // 运行
 func (l *Lambda) Run() {
-	gs := gatesock.New(l.Slog, l.executer, l.GateAddr, l.TaskName, l.WriteTimeout, &l.mu)
+	gs := gatesock.New(l.Slog, l.executer, l.Endpoint, l.TaskName, l.WriteTimeout, &l.mu)
 	gs.CreateConntion()
 }
