@@ -126,7 +126,9 @@ func (l *Lambda) executer(conn *websocket.Conn, param *model.Param) (payload []b
 			l.Warn().Msgf("call handler fail:%s\n", err)
 			continue
 		}
-		_ = rsp
+
+		// TODO 把结果回写到服务端
+		l.Debug().Msgf("lambda result:%s\n", rsp)
 	}
 
 	return nil, nil

@@ -23,7 +23,7 @@ type GateSock struct {
 }
 
 func New(slog *slog.Slog, cb Callback, gateAddr string, name string, writeTimeout time.Duration, mu *sync.Mutex) *GateSock {
-	return &GateSock{Slog: slog, callback: cb}
+	return &GateSock{Slog: slog, callback: cb, gateAddr: gateAddr, name: name, writeTimeout: writeTimeout, mu: mu}
 }
 
 // 接受来自gate服务的命令, 执行并返回结果

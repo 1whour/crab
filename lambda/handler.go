@@ -1,7 +1,8 @@
 package lambda
 
 // base 来自aws-lambda-go
-// guonaihong:删除了一些用不到的参数, 修改reflectHandler 第二参数返回形式
+// guonaihong:删除了一些用不到的参数,
+// 修改reflectHandler 参数返回error
 
 import (
 	"bytes"
@@ -114,6 +115,7 @@ func reflectHandler(handlerFunc interface{}) (Handler, error) {
 		if takesContext {
 			args = append(args, reflect.ValueOf(ctx))
 		}
+
 		if (handlerType.NumIn() == 1 && !takesContext) || handlerType.NumIn() == 2 {
 			eventType := handlerType.In(handlerType.NumIn() - 1)
 			event := reflect.New(eventType)
@@ -136,6 +138,7 @@ func reflectHandler(handlerFunc interface{}) (Handler, error) {
 		if len(response) > 1 {
 			val = response[0].Interface()
 		}
+
 		if err := encoder.Encode(val); err != nil {
 			return nil, err
 		}
