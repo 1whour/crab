@@ -51,6 +51,11 @@ func New(opts ...Option) (*Lambda, error) {
 		c.Slog = slog.New(os.Stdout).SetLevel("debug")
 	}
 
+	// 给个默认超时时间
+	if c.WriteTimeout == 0 {
+		c.WriteTimeout = model.RuntimeKeepalive
+	}
+
 	return c, nil
 }
 
