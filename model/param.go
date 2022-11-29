@@ -1,6 +1,8 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 type Param struct {
 	//api的版本号, 如果有不兼容的修改，直接修改这个字段就行

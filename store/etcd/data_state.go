@@ -194,6 +194,11 @@ func (e *EtcdStore) UpdateCallStateInner(ctx context.Context, taskName string, s
 			return err
 		}
 
+		if len(rspState.Kvs) == 0 {
+			return fmt.Errorf("rsp state.size is 0: value(%v), key(%s)", rspState, globalTaskState)
+		}
+
+		e.Warn().Msgf("rsp state.size is 0: value(%v), key(%s)", rspState, globalTaskState)
 		// 获取 修改版本号
 		modRevision := rspState.Kvs[0].ModRevision
 		fullTaskState := model.FullGlobalTaskState(taskName)
