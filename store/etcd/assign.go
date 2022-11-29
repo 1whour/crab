@@ -3,6 +3,7 @@ package etcd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/gnh123/scheduler/model"
@@ -26,8 +27,16 @@ func (e *EtcdStore) selectRuntimeNode(state model.State) (string, error) {
 			return "", errors.New("assign.lambdaNodes.size is 0")
 		}
 
-		// TODO
-		e.RuntimeNode.LambdaNode.Keys()
+		// TODO, 换成支持前缀查找的数据结构
+		// 先只支持一个节点
+		prefix := model.ToLocalTaskLambdaPrefix(state.TaskName)
+		_, ok := e.LambdaNode.Load(prefix)
+		if ok {
+			return prefix, nil
+		}
+
+		e.Debug().Msgf("lambda not found:prefix(%s): taskName(%s)", prefix, state.TaskName)
+		return "", fmt.Errorf("lambda not found:%s", prefix)
 	}
 
 	runtimeNodes := e.RuntimeNode.RuntimeNode.Keys()

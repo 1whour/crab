@@ -2,7 +2,6 @@ package gate
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -176,18 +175,9 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 		req.SetRemove()
 	}
 
-	// 请求重新序列化成json, 把action的变化加进去
-	all, err := json.Marshal(req)
-	if err != nil {
-		r.error(c, 500, "marshal req:%v", err)
-		return
-	}
-
-	taskName := req.Executer.TaskName
-
 	// TODO 换成带lock的API
-	err = defaultStore.LockUnlock(r.ctx, taskName, func() error {
-		return defaultStore.UpdateDataAndState(r.ctx, taskName, string(all), rsp.Kvs[0].ModRevision, model.CanRun, action)
+	err = defaultStore.LockUnlock(r.ctx, req.Executer.TaskName, func() error {
+		return defaultStore.UpdateDataAndState(r.ctx, &req, rsp.Kvs[0].ModRevision, model.CanRun, action)
 	})
 
 	if err != nil {

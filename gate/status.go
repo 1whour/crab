@@ -42,7 +42,6 @@ func (r *Gate) status(c *gin.Context) {
 				c.String(500, err.Error())
 				return
 			}
-			taskName := model.TaskName(string(kv.Key))
 			ip := ""
 			if len(s.RuntimeNode) > 0 {
 				rspState, err = defaultKVC.Get(r.ctx, s.RuntimeNode)
@@ -54,7 +53,7 @@ func (r *Gate) status(c *gin.Context) {
 					ip = string(rspState.Kvs[0].Value)
 				}
 			}
-			one := []string{taskName, s.State, s.Action, s.RuntimeNode, fmt.Sprintf("%t", s.InRuntime), s.CreateTime.String(), s.UpdateTime.String(), ip}
+			one := []string{s.TaskName, s.State, s.Action, s.RuntimeNode, fmt.Sprintf("%t", s.InRuntime), s.CreateTime.String(), s.UpdateTime.String(), ip}
 			if len(req.Filter) > 0 {
 				for i := 0; i < len(req.Filter) && len(req.Filter)%2 == 0; i += 2 {
 					pos := slices.Index(title, req.Filter[i])

@@ -38,7 +38,7 @@ func (m *EtcdStore) NeedFix(ctx context.Context, state model.State) bool {
 
 	ip, err = m.defaultKVC.Get(ctx, state.RuntimeNode)
 	if err != nil {
-		//m.Error().Msgf("restartRunning: get ip %v, key(%s)\n", err, state.RuntimeNode)
+		//m.Error().Msgf("restartRunning: 2 get ip %v, key(%s)\n", err, state.RuntimeNode)
 		goto next
 	}
 
@@ -47,6 +47,7 @@ func (m *EtcdStore) NeedFix(ctx context.Context, state model.State) bool {
 	//                   mjobs NeedFix()
 	// 就会发现NeedFix() 会导致这个任务被重放了一遍
 	if (state.IsStop() || state.IsRemove()) && state.InRuntime && len(ip.Kvs) > 0 && time.Since(state.UpdateTime) > model.RuntimeKeepalive+1 {
+		//m.Error().Msgf("restartRunning: 3")
 		return true
 	}
 

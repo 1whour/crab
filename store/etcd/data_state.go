@@ -38,7 +38,7 @@ func NewStore(EtcdAddr []string, slog *slog.Slog, runtimeNode *model.RuntimeNode
 	}, nil
 }
 
-// 创建全局状态与数据队列, 仅仅保存
+// 创建全局状态与数据队列, 调用create web接口时用到
 func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, req *model.Param) error {
 
 	globalData, err := json.Marshal(req)
@@ -52,7 +52,7 @@ func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, req
 	// 创建状态队列
 	globalTaskStateName := model.FullGlobalTaskState(taskName)
 	// 创建全局状态队列里面的队列
-	state, err := model.NewState(req.Kind, req.IsLambda())
+	state, err := model.NewState(req.Kind, req)
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,15 @@ func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, req
 }
 
 // 更新全局数据与状态队列, 仅仅更新数据
-func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, globalData string, rspModRevision int64, state string, action string) error {
+func (e *EtcdStore) UpdateDataAndState(ctx context.Context, req *model.Param, rspModRevision int64, state string, action string) error {
+
+	// 请求重新序列化成json, 把action的变化加进去
+	globalData, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	taskName := req.Executer.TaskName
 
 	globalTaskName := model.FullGlobalTask(taskName)
 	// 创建全局状态队列key名
@@ -94,7 +102,7 @@ func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, glo
 		rspStateModRevision := rspState.Kvs[0].ModRevision
 
 		// 更新json中的State是CanRun
-		newValue, err := model.UpdateState(rspState.Kvs[0].Value, "", state, action)
+		newValue, err := model.UpdateState(rspState.Kvs[0].Value, "", state, action, req, taskName)
 		if err != nil {
 			return fmt.Errorf("updateTask, onlyUpdateState(CanRun) err :%v", err)
 		}
@@ -105,7 +113,7 @@ func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, glo
 			clientv3.Compare(clientv3.ModRevision(globalTaskStateName), "=", rspStateModRevision),
 		).
 			Then(
-				clientv3.OpPut(globalTaskName, globalData),            //更新全局队列里面的数据
+				clientv3.OpPut(globalTaskName, string(globalData)),    //更新全局队列里面的数据
 				clientv3.OpPut(globalTaskStateName, string(newValue)), //更新全局状态队列里面的状态
 			).Else()
 
@@ -130,7 +138,7 @@ func (e *EtcdStore) UpdateDataAndState(ctx context.Context, taskName string, glo
 	return nil
 }
 
-// 更新本地队列和全局队列, 分配任务mjobs模块调用
+// 更新本地队列和全局队列, 设置state为running, 分配任务mjobs模块调用
 func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, runtimeNode string, rsp *clientv3.GetResponse, action string) (err error) {
 
 	modRevision := rsp.Kvs[0].ModRevision
@@ -143,7 +151,7 @@ func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, r
 		panic("action is empty")
 	}
 	// 更新状态中的runtimeNode
-	newValue, err := model.UpdateState(rsp.Kvs[0].Value, runtimeNode, model.Running, action)
+	newValue, err := model.UpdateState(rsp.Kvs[0].Value, runtimeNode, model.Running, action, nil, taskName)
 	if err != nil {
 		return err
 	}

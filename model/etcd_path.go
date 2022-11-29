@@ -44,6 +44,12 @@ func WatchLocalRuntimePrefix(runtimeName string) string {
 	return fmt.Sprintf("%s/%s", LocalRuntimeTaskPrefix, runtimeName)
 }
 
+// 返回lambda的前缀
+func ToLocalTaskLambdaPrefix(fullPathOrTaskName string) string {
+	taskName := takeNameFromPath(fullPathOrTaskName)
+	return fmt.Sprintf("%s/%s", RuntimeNodeLambdaPrefix, taskName)
+}
+
 // runtimeNode转成本地队列前缀 路径
 func ToLocalTaskPrefix(fullRuntimeName string) string {
 	runtimeName := takeNameFromPath(fullRuntimeName)
