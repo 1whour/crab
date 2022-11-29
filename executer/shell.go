@@ -19,8 +19,8 @@ func (s *shellExecuter) Stop() error {
 	return s.cmd.Process.Kill()
 }
 
-func (s *shellExecuter) Run() error {
-	return s.cmd.Run()
+func (s *shellExecuter) Run() ([]byte, error) {
+	return s.cmd.Output()
 }
 
 func createShellExecuter(ctx context.Context, param *model.Param) Executer {

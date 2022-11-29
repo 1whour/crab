@@ -32,6 +32,7 @@ executer:
 
 	param.Executer.Shell.Command = strings.Replace(param.Executer.Shell.Command, "127.0.0.1:8181", ts.URL, -1)
 	fmt.Printf("%v, %s\n", ts.URL, param.Executer.Shell.Command)
-	err = createShellExecuter(context.TODO(), &param).Run()
+	payload, err := createShellExecuter(context.TODO(), &param).Run()
 	assert.NoError(t, err)
+	assert.Equal(t, len(payload), 0)
 }

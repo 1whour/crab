@@ -9,8 +9,8 @@ import (
 )
 
 type Executer interface {
-	Run() error  //运行
-	Stop() error //取消
+	Run() ([]byte, error) //运行
+	Stop() error          //取消
 }
 
 // key是执行器的名字，value是执行器的构造函数

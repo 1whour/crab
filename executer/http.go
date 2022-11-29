@@ -1,6 +1,7 @@
 package executer
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -27,7 +28,7 @@ type httpExecuter struct {
 }
 
 // 运行
-func (h *httpExecuter) Run() error {
+func (h *httpExecuter) Run() (payload []byte, err error) {
 	httpData := h.param.HTTP
 
 	h.req.SetMethod(strings.ToUpper(httpData.Method))
@@ -64,9 +65,10 @@ func (h *httpExecuter) Run() error {
 	h.req.SetBody(httpData.Body) //设置body
 	h.req.WithContext(h.ctx)     //设置context
 	code := 0
-	err := h.req.Code(&code).Debug(true).Do()
+	var buf bytes.Buffer
+	err = h.req.Code(&code).Debug(true).BindBody(&buf).Do()
 
-	return ifop.IfElse(err != nil,
+	return buf.Bytes(), ifop.IfElse(err != nil,
 		err,
 		ifop.IfElse(code != 200,
 			errors.New("httpExecuter, http code != 200"),

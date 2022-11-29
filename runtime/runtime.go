@@ -28,31 +28,28 @@ var (
 
 // 负责连接到gate服务
 // 1. 如果是内网模式，runtime和gate在互相可访达的网络, 直接从etcd watch gate节点信息
-// 2. 如果是外网模式，runtime只要写一个或者多个GateAddr, 做客户的负载均衡
+// 2. 如果是外网模式，runtime只要写一个或者多个Endpoint, 做客户的负载均衡
 // 3. 可以执行http, shell, grpc任务
 type Runtime struct {
 	cron         *cronex.Cronex
 	EtcdAddr     []string      `clop:"short;long;greedy" usage:"etcd address"`
-	GateAddr     []string      `clop:"long" usage:"endpoint address"`
+	Endpoint     []string      `clop:"long" usage:"endpoint address"`
 	Level        string        `clop:"short;long" usage:"log level" default:"error"`
 	WriteTimeout time.Duration `clop:"short;long" usage:"Timeout when writing messages" default:"3s"`
-	Name         string        `clop:"short;long" usage:"node name"`
+	NodeName     string        `clop:"short;long" usage:"node name"`
 	ctx          context.Context
 	*slog.Slog
 
-	muWc sync.Mutex //保护多个go程写同一个conn
+	MuConn sync.Mutex //保护多个go程写同一个conn
 
 	cronFunc rwmap.RWMap[string, cronNode]
 	addrs    rwmap.RWMap[string, string]
-
-	//*gatesock.GateSock
 }
 
 type cronNode struct {
 	ctx    context.Context
 	cancel context.CancelFunc
-	//tm     cron.EntryID
-	tm cronex.TimerNoder
+	tm     cronex.TimerNoder
 }
 
 func (c *cronNode) close() {
@@ -60,20 +57,19 @@ func (c *cronNode) close() {
 	c.tm.Stop()
 }
 
-func (r *Runtime) init() (err error) {
+func (r *Runtime) Init() (err error) {
 
 	// 如果节点名为空，默认给个uuid
-	if r.Name == "" {
-		r.Name = uuid.New().String()
+	if r.NodeName == "" {
+		r.NodeName = uuid.New().String()
 	}
 
 	r.cron = cronex.New()
 	r.ctx = context.TODO()
-	r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("runtime", r.Name)
+	r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("runtime", r.NodeName)
 
-	if len(r.EtcdAddr) == 0 && len(r.GateAddr) == 0 {
-		r.Error().Msg("etcd address is nil or endpoint is nil")
-		os.Exit(1)
+	if len(r.EtcdAddr) == 0 && len(r.Endpoint) == 0 {
+		return fmt.Errorf("etcd address is nil or endpoint is nil")
 	}
 
 	// 设置日志
@@ -93,7 +89,7 @@ func (r *Runtime) init() (err error) {
 		}
 	}
 
-	for i, a := range r.GateAddr {
+	for i, a := range r.Endpoint {
 		r.addrs.Store(a, fmt.Sprintf("endpoint index:%d", i))
 	}
 
@@ -103,7 +99,7 @@ func (r *Runtime) init() (err error) {
 
 // watch etcd里面的gate地址的变化
 func (r *Runtime) watchGateNode() {
-	// 直接指定的GateAddr地址，没走etcd发现逻辑
+	// 直接指定的Endpoint地址，没走etcd发现逻辑
 	if len(r.EtcdAddr) == 0 {
 		return
 	}
@@ -144,9 +140,9 @@ func (r *Runtime) watchGateNode() {
 
 // 写回错误的结果, TODO，可能通过http返回
 func (r *Runtime) writeError(conn *websocket.Conn, to time.Duration, code int, msg string) (err error) {
-	r.muWc.Lock()
+	r.MuConn.Lock()
 	err = utils.WriteJsonTimeout(conn, model.RuntimeResp{Code: code, Message: msg}, to)
-	r.muWc.Unlock()
+	r.MuConn.Unlock()
 	return err
 }
 
@@ -167,10 +163,7 @@ func (r *Runtime) createToExec(ctx context.Context, param *model.Param) ([]byte,
 		return nil, err
 	}
 
-	if err := e.Run(); err != nil {
-		return nil, err
-	}
-	return nil, nil
+	return e.Run()
 }
 
 func (r *Runtime) createCron(param *model.Param) (b []byte, err error) {
@@ -181,10 +174,11 @@ func (r *Runtime) createCron(param *model.Param) (b []byte, err error) {
 		payload, err := r.createToExec(ctx, param)
 		if err != nil {
 			r.Error().Msgf("createToExec %s, taskName:%s\n", err, param.Executer.TaskName)
+			return
 		}
-		// TODO 错误要上报到gate模块
-		// TODO payload
-		_ = payload
+		// TODO: 错误要上报到gate模块
+		// TODO: payload
+		r.Debug().Msgf("result:%s", payload)
 	})
 
 	if err != nil {
@@ -239,7 +233,7 @@ func (i *interval) sleep() {
 // 故意这么设计
 // 为了简化gate广播发送的逻辑, 一个runtime只会连一个gate，并且只有一个长连接，
 // 这样不需要考虑去重，引入额外中间件，简化设计
-func (r *Runtime) createConnRand() {
+func (r *Runtime) createConnRand(lambda bool) (err error) {
 
 	var t interval
 	t.reset()
@@ -257,7 +251,7 @@ func (r *Runtime) createConnRand() {
 
 		for i := 0; i < 2; i++ {
 			r.Debug().Msgf("# addr is %s", addr)
-			gs := gatesock.New(r.Slog, r.runCrudCmd, addr, r.Name, r.WriteTimeout, &r.muWc, false)
+			gs := gatesock.New(r.Slog, r.runCrudCmd, addr, r.NodeName, r.WriteTimeout, &r.MuConn, lambda)
 			if err := gs.CreateConntion(); err != nil {
 				// 如果握手或者上传第一个包失败，sleep 下，再重连一次
 				r.Error().Msgf("createConnection fail:%v\n", err)
@@ -269,10 +263,28 @@ func (r *Runtime) createConnRand() {
 	}
 }
 
-// 该模块的入口函数
-func (r *Runtime) SubMain() {
+func (r *Runtime) Run(lambda bool, initAfter func()) error {
 
-	r.init()
-	go r.createConnRand()
-	r.watchGateNode()
+	if err := r.Init(); err != nil {
+		return err
+	}
+
+	if initAfter != nil {
+		initAfter()
+	}
+	if len(r.EtcdAddr) > 0 {
+		go r.createConnRand(lambda)
+		r.watchGateNode()
+		return nil
+	}
+
+	return r.createConnRand(lambda)
+}
+
+// 该模块的入口函数
+// 命令行里面的子命令会调用
+func (r *Runtime) SubMain() {
+	if err := r.Run(false, nil); err != nil {
+		os.Exit(1)
+	}
 }

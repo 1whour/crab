@@ -53,6 +53,7 @@ executer:
 	}
 
 	fmt.Printf("%s\n", ts.URL)
-	err = createHTTPExecuter(context.TODO(), &param).Run()
+	payload, err := createHTTPExecuter(context.TODO(), &param).Run()
 	assert.NoError(t, err)
+	assert.Equal(t, len(payload), 0)
 }
