@@ -5,6 +5,7 @@ trigger:
 executer:
   lambda:
     func:
-    - Name: main.hello
-      Args: |
-        {"a":"b"}
+    - name: main.hello
+    - name: main.newYear
+      args: |
+        {"Name":"g", "Age":1}

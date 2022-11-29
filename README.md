@@ -86,9 +86,10 @@ trigger:
 executer:
   lambda:
     func:
-    - Name: hello
-      args: ""
-
+    - name: main.hello
+    - name: main.newYear
+      args: |
+        {"Name":"g", "Age":1}
 ```
 
 #### 4.2 自定义lambda实现
@@ -106,17 +107,38 @@ executer:
 package main
 
 import (
+	"fmt"
+
 	"github.com/gnh123/scheduler/lambda"
 )
 
 func hello() (string, error) {
+	fmt.Printf("hello\n")
 	return "Hello λ!", nil
 }
 
+type Req struct {
+	Name string
+	Age  int
+}
+
+func newYear(r Req) (Req, error) {
+	fmt.Printf("年龄+1\n")
+	r.Age += 1
+	return r, nil
+}
+
 func main() {
-  lmd := lambda.New()
-  lmd.Start(hello)
-  lmd.Run()
+	lmd, err := lambda.New(lambda.WithTaskName("123456789"), lambda.WithEndpoint("127.0.0.1:3535"))
+	if err != nil {
+		panic(err)
+	}
+	// 函数名是main.hello
+	lmd.Start(hello)
+	// 函数名是main.newYear
+	lmd.Start(newYear)
+
+	fmt.Println(lmd.Run())
 }
 ```
 
