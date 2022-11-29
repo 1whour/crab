@@ -144,5 +144,5 @@ func main() {
 
 #### 4.3 保存至scheduler
 ```yaml
-scheduler start ./example/lambda.yaml
+./scheduler start -f example/lambda.yaml -g 127.0.0.1:3535 -t 123456789
 ```

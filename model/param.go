@@ -90,6 +90,9 @@ func (p ExecuterParam) Name() string {
 		return "grpc"
 	}
 
+	if p.Lambda != nil && p.Lambda.Funcs != nil {
+		return "lambda" + p.TaskName
+	}
 	return ""
 }
 

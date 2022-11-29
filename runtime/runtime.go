@@ -36,8 +36,9 @@ type Runtime struct {
 	Endpoint     []string      `clop:"long" usage:"endpoint address"`
 	Level        string        `clop:"short;long" usage:"log level" default:"error"`
 	WriteTimeout time.Duration `clop:"short;long" usage:"Timeout when writing messages" default:"3s"`
-	NodeName     string        `clop:"short;long" usage:"node name"`
-	ctx          context.Context
+	// 节点名称，如果不填写，默认是uuid
+	NodeName string `clop:"short;long" usage:"node name"`
+	ctx      context.Context
 	*slog.Slog
 
 	MuConn sync.Mutex //保护多个go程写同一个conn
@@ -66,7 +67,11 @@ func (r *Runtime) Init() (err error) {
 
 	r.cron = cronex.New()
 	r.ctx = context.TODO()
-	r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("runtime", r.NodeName)
+
+	// runtime被内嵌到lambda里面，可能Slog已经被初始化过
+	if r.Slog == nil {
+		r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("runtime", r.NodeName)
+	}
 
 	if len(r.EtcdAddr) == 0 && len(r.Endpoint) == 0 {
 		return fmt.Errorf("etcd address is nil or endpoint is nil")
