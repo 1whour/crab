@@ -18,13 +18,14 @@ type GateSock struct {
 	callback     Callback
 	gateAddr     string
 	name         string
+	id           string
 	writeTimeout time.Duration
 	lambda       bool
 	mu           *sync.Mutex
 }
 
-func New(slog *slog.Slog, cb Callback, gateAddr string, name string, writeTimeout time.Duration, mu *sync.Mutex, lambda bool) *GateSock {
-	return &GateSock{Slog: slog, callback: cb, gateAddr: gateAddr, name: name, writeTimeout: writeTimeout, mu: mu, lambda: lambda}
+func New(slog *slog.Slog, cb Callback, gateAddr string, name string, writeTimeout time.Duration, mu *sync.Mutex, lambda bool, id string) *GateSock {
+	return &GateSock{Slog: slog, callback: cb, gateAddr: gateAddr, name: name, writeTimeout: writeTimeout, mu: mu, lambda: lambda, id: id}
 }
 
 // 接受来自gate服务的命令, 执行并返回结果
@@ -73,7 +74,7 @@ func genGateAddr(gateAddr string) string {
 
 func (g *GateSock) writeWhoami(conn *websocket.Conn) (err error) {
 	g.mu.Lock()
-	err = utils.WriteJsonTimeout(conn, model.Whoami{Name: g.name, Lambda: g.lambda}, g.writeTimeout)
+	err = utils.WriteJsonTimeout(conn, model.Whoami{Name: g.name, Lambda: g.lambda, Id: g.id}, g.writeTimeout)
 	g.mu.Unlock()
 	return err
 }

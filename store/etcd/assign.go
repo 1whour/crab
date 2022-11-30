@@ -8,7 +8,6 @@ import (
 
 	"github.com/gnh123/scheduler/model"
 	"github.com/gnh123/scheduler/utils"
-	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
@@ -93,11 +92,13 @@ func (e *EtcdStore) AssignMutexWithCb(ctx context.Context, oneTask model.KeyVal,
 // 分配任务的逻辑
 func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover bool) error {
 
+	// 获取状态数据
 	rspState, err := e.defaultKVC.Get(ctx, oneTask.Key)
 	if err != nil {
 		e.Warn().Msgf("failover:(%t) ", failover)
 		return err
 	}
+	// 解析成结构体
 	state, err := model.ValueToState(rspState.Kvs[0].Value)
 	if err != nil {
 		e.Warn().Msgf("key: value to state:%s ", err)
@@ -137,24 +138,14 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 	if err != nil {
 		return err
 	}
+
 	// 如果runtimeNode绑定好，除了出错，或者新建，会取目前绑定的runtimeNode直接使用
-	if !failover && !state.IsCreate() && !state.IsFailed() {
+	if !failover && !state.IsCreate() {
 		e.Debug().Msgf("state:%v\n", state)
 		runtimeNode = state.RuntimeNode
 	}
 
 	e.Debug().Msgf("assign, taskName %s, action:(%s)\n", taskName, oneTask.State.Action)
-	rsp, err := e.defaultKVC.Get(ctx, model.FullGlobalTask(taskName), clientv3.WithRev(int64(oneTask.Version)))
-	if err != nil {
-		e.Error().Msgf("get global task path fail:%s\n", err)
-		return err
-	}
-
-	if len(rsp.Kvs) == 0 {
-		e.Warn().Msgf("get %s value is nil\n", model.FullGlobalTask(taskName))
-		return err
-	}
-
 	// 如果是没有在运行中的删除任务，直接清理data, state队列中的数据
 	if oneTask.State.IsRemove() && !oneTask.State.InRuntime && !oneTask.State.IsFailed() {
 		e.defaultKVC.Delete(ctx, model.FullGlobalTask(taskName))

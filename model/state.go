@@ -16,26 +16,28 @@ const (
 // 1.如果是Create和Update的任务，任务绑定的runtime是空, State是任何状态，都需要被恢复, 这是一个还需要被运行的状态
 // 2.如果是Stop和Rm的任务, 如果runtimeNode不为空。InRuntime == 0时会尝试一次
 type State struct {
+	// 任务名
+	TaskName string `json:"taskName"`
 	// 任务id
-	TaskName string
+	Id string `json:"id"`
 	// 每个任务从全局队列中分配到本地队列都会绑定一个runtime
-	RuntimeNode string
+	RuntimeNode string `json:"runtimeNode"`
 	// 运行时状态, CanRun, Running, failed
-	State string
+	State string `json:"state"`
 	// 任务本身的状态, Create, Update, Stop, Rm
-	Action string
+	Action string `json:"action"`
 	// true表示任务正在运行，false表示任务没有运行
-	InRuntime bool
+	InRuntime bool `json:"InRuntime"`
 	//创建时间, 日志作用
-	CreateTime time.Time
+	CreateTime time.Time `json:"createTime"`
 	//更新时间, 日志作用
-	UpdateTime time.Time
+	UpdateTime time.Time `json:"updateTime"`
 	// ack消息标记
-	Ack bool
+	Ack bool `json:"ack"`
 	// 从数据字段移过来
-	Kind string
+	Kind string `json:"kind"`
 	// 是否是Lambda函数，必须要绑定
-	Lambda bool
+	Lambda bool `json:"lambda"`
 }
 
 func (s State) IsOneRuntime() bool {

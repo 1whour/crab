@@ -243,6 +243,7 @@ func (r *Runtime) createConnRand(lambda bool) (err error) {
 	var t interval
 	t.reset()
 
+	id := uuid.New().String()
 	for {
 
 		addrs := r.addrs.Keys()
@@ -255,8 +256,8 @@ func (r *Runtime) createConnRand(lambda bool) (err error) {
 		addr := utils.SliceRandOne(addrs)
 
 		for i := 0; i < 2; i++ {
-			r.Debug().Msgf("# addr is %s", addr)
-			gs := gatesock.New(r.Slog, r.runCrudCmd, addr, r.NodeName, r.WriteTimeout, &r.MuConn, lambda)
+			r.Debug().Msgf("# addr is %s, id:%s", addr, id)
+			gs := gatesock.New(r.Slog, r.runCrudCmd, addr, r.NodeName, r.WriteTimeout, &r.MuConn, lambda, id)
 			if err := gs.CreateConntion(); err != nil {
 				// 如果握手或者上传第一个包失败，sleep 下，再重连一次
 				r.Error().Msgf("createConnection fail:%v\n", err)

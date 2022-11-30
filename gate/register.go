@@ -1,6 +1,7 @@
 package gate
 
 import (
+	"encoding/json"
 	"os"
 
 	"github.com/gnh123/scheduler/model"
@@ -75,9 +76,18 @@ func (r *Gate) registerRuntimeWithKeepalive(who model.Whoami, keepalive chan boo
 	// 注册自己的节点信息
 	nodeName := model.FullRuntimeNode(who)
 	r.Info().Msgf("gate.register.runtime.node:%s, host:%s\n", nodeName, r.ServerAddr)
-	_, err = defautlClient.Put(r.ctx, nodeName, r.ServerAddr, clientv3.WithLease(leaseID))
+	info := model.RegisterRuntime{Whoami: who, Ip: r.ServerAddr}
+	all, err := json.Marshal(&info)
+	if err != nil {
+		r.Error().Msgf("gate.register.runtime.node:%s, host:%s, marshal json fail:%s\n", nodeName, r.ServerAddr, err)
+		return err
+	}
+
+	_, err = defautlClient.Put(r.ctx, nodeName, string(all), clientv3.WithLease(leaseID))
+
 	if err != nil {
 		r.Error().Msgf("gate.register.runtime.node %s\n", err)
+		return err
 	}
 
 	for range keepalive {

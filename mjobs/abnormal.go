@@ -31,6 +31,7 @@ func (m *Mjobs) failover(fullRuntime string) error {
 			continue
 		}
 
+		// restartRunning也会修复死任务，当restartRunning和failover并发访问时，需要NeedFix去重
 		if defaultStore.NeedFix(m.ctx, state) {
 			defaultStore.AssignMutex(m.ctx, model.KeyVal{Key: string(rsp.Kvs[0].Key), Val: string(rsp.Kvs[0].Value)}, true)
 			_, err = defaultKVC.Delete(m.ctx, string(keyval.Key))
