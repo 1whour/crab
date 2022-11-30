@@ -5,11 +5,11 @@ scheduler是分布式调度框架，主要功能定时，延时，lambda等功�
 开发中。。。
 
 ## 主要特性
-* 内置服务注册与发现。实现节点的水平扩张, 依赖etcd
-* 支持http, shell, grpc(TODO)
-* 支持lambda，基于runtime级别多语言扩展能力, 性能可观
-* 大量的测试，让bug少之又少
-* DAG支持(TODO)
+* ☑内置服务注册与发现。实现节点的水平扩张, 依赖etcd
+* ☑支持lambda，基于runtime级别多语言扩展能力, 性能可观
+* ☑大量的测试，让bug少之又少
+* ☐DAG支持(TODO)
+* ☐支持http, shell, grpc(TODO)
 
 ## 架构图
 
