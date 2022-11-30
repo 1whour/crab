@@ -10,7 +10,8 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
+func (r *Gate) watchLocalRunq(req *model.Whoami, conn *websocket.Conn) {
+	runtimeName := req.Name
 	// 生成本地队列的前缀
 	localPath := model.WatchLocalRuntimePrefix(runtimeName)
 	// watch本地队列的任务
@@ -28,6 +29,8 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 			taskName := model.TaskName(localKey)
 			// 生成全局队列名
 			globalKey := model.ToGlobalTask(localKey)
+			// 生成全局状态队列名
+			globalStateKey := model.ToGlobalTaskState(localKey)
 			// 获取全局队列里面的task配置信息
 			rsp, err := defaultKVC.Get(r.ctx, globalKey)
 			if err != nil {
@@ -35,7 +38,13 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 				continue
 			}
 
-			if len(rsp.Kvs) == 0 {
+			rspState, err := defaultKVC.Get(r.ctx, globalStateKey)
+			if err != nil {
+				r.Warn().Msgf("gate.watchLocalRunq: get param %s\n", err)
+				continue
+			}
+
+			if len(rsp.Kvs) == 0 || len(rspState.Kvs) == 0 {
 				continue
 			}
 
@@ -48,12 +57,25 @@ func (r *Gate) watchLocalRunq(runtimeName string, conn *websocket.Conn) {
 				continue
 			}
 
+			state, err := model.ValueToState(rspState.Kvs[0].Value)
+			if err != nil {
+				r.Warn().Msgf("gate.watchLocalRunq:%s\n", err)
+				continue
+			}
+
+			// TODO: Lambda 支持多实例，这里需要重新考虑下
+			if state.Id != req.Id {
+				r.Warn().Msgf("This is an old runtime:new id(%s) old id(%s)", state.Id, req.Id)
+				return
+			}
+
 			switch {
 			case ev.IsCreate(), ev.IsModify():
 				// 如果是新建或者被修改过的，直接推送到客户端
 				// 成功的状态是model.Succeeded, 失败的状态是model.Failed
 				if err := utils.WriteMessageTimeout(conn, value, r.WriteTime); err != nil {
-					r.Warn().Msgf("gate.watchLocalRunq, WriteMessageTimeout :%s, runtimeName:%s bye bye, taskName(%s)\n", err, runtimeName, taskName)
+					r.Warn().Msgf("gate.watchLocalRunq, WriteMessageTimeout :%s, runtimeName:%s bye bye, taskName(%s), timeout(%v)\n",
+						err, runtimeName, taskName, r.WriteTime)
 					// 更新全局状态, 修改为失败标志
 					defaultStore.LockUnlock(r.ctx, taskName, func() error {
 						err := defaultStore.UpdateCallStateFailed(r.ctx, taskName)

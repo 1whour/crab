@@ -23,9 +23,3 @@ func (e *EtcdStore) LockUpdateCallStateSuccessed(ctx context.Context, taskName s
 		return e.UpdateCallStateSuccessed(ctx, taskName)
 	})
 }
-
-func (e *EtcdStore) LockUpdateCallStateFailed(ctx context.Context, taskName string) error {
-	return e.LockUnlock(ctx, taskName, func() error {
-		return e.UpdateCallStateFailed(ctx, taskName)
-	})
-}

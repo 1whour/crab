@@ -2,13 +2,13 @@
 # Change the path of bin/etcd if etcd is located elsewhere
 
 # mock服务，用于检查http执行的次数可对
-scheduler.mocksrv: ./scheduler mocksrv
+ktuo.mocksrv: ./ktuo mocksrv
 #scheduler.gate-auto1:    ./scheduler gate -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -a -l debug
 #scheduler.gate-atuo2:    ./scheduler gate -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -a -l debug
-scheduler.gate1:    ./scheduler gate -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -l debug -s "127.0.0.1:3434"
-scheduler.gate2:    ./scheduler gate -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -l debug -s "127.0.0.1:3535"
-scheduler.runtime1: ./scheduler runtime -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 --level debug
-scheduler.runtime2: ./scheduler runtime -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 --level debug
-scheduler.mjobs1:   ./scheduler mjobs -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -l debug
-scheduler.mjobs2:   ./scheduler mjobs -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -l debug
+ktuo.gate1:    ./ktuo gate -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -l debug -s "127.0.0.1:3434"
+ktuo.gate2:    ./ktuo gate -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -l debug -s "127.0.0.1:3535"
+ktuo.runtime1: ./ktuo runtime -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 --level debug
+ktuo.runtime2: ./ktuo runtime -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 --level debug
+ktuo.mjobs1:   ./ktuo mjobs -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -l debug
+ktuo.mjobs2:   ./ktuo mjobs -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -l debug
 

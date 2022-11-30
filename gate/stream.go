@@ -33,7 +33,7 @@ func (r *Gate) stream(c *gin.Context) {
 			go func() {
 				r.registerRuntimeWithKeepalive(req, keepalive)
 			}()
-			go r.watchLocalRunq(req.Name, con)
+			go r.watchLocalRunq(&req, con)
 			runtimeNode = req.Name
 		} else {
 			keepalive <- true
