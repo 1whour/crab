@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/gnh123/ktuo/model"
-	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 func (e *EtcdStore) LockCreateDataAndState(ctx context.Context, taskName string, req *model.Param) error {
@@ -13,10 +12,9 @@ func (e *EtcdStore) LockCreateDataAndState(ctx context.Context, taskName string,
 	})
 
 }
-
-func (e *EtcdStore) LockUpdateLocalAndGlobal(ctx context.Context, taskName string, runtimeNode string, rsp *clientv3.GetResponse, action string) (err error) {
+func (e *EtcdStore) LockUpdateDataAndState(ctx context.Context, taskName string, req *model.Param, rspModRevision int64, state string, action string) error {
 	return e.LockUnlock(ctx, taskName, func() error {
-		return e.UpdateLocalAndGlobal(ctx, taskName, runtimeNode, rsp, action)
+		return e.UpdateDataAndState(ctx, req, rspModRevision, state, action)
 	})
 }
 

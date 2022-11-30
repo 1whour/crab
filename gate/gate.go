@@ -175,11 +175,7 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 		req.SetRemove()
 	}
 
-	// TODO 换成带lock的API
-	err = defaultStore.LockUnlock(r.ctx, req.Executer.TaskName, func() error {
-		return defaultStore.UpdateDataAndState(r.ctx, &req, rsp.Kvs[0].ModRevision, model.CanRun, action)
-	})
-
+	err = defaultStore.LockUpdateDataAndState(r.ctx, req.Executer.TaskName, &req, rsp.Kvs[0].ModRevision, model.CanRun, action)
 	if err != nil {
 		r.error(c, 500, err.Error())
 		return

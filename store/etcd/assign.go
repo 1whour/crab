@@ -2,6 +2,7 @@ package etcd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -98,6 +99,7 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 		e.Warn().Msgf("failover:(%t) ", failover)
 		return err
 	}
+
 	// 解析成结构体
 	state, err := model.ValueToState(rspState.Kvs[0].Value)
 	if err != nil {
@@ -111,6 +113,7 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 		failover = e.NeedFix(ctx, state)
 	}
 
+	// 状态是好的，并且是running状态直接返回
 	if !failover {
 		if state.IsRunning() {
 			e.Debug().Msgf("Ignore:This task has been assigned, key:%s, state:%v\n", oneTask.Key, state)
@@ -153,15 +156,30 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 		return nil
 	}
 
+	runtimeInfo, err := e.defaultKVC.Get(ctx, runtimeNode)
+	if err != nil {
+		e.Error().Msgf("get runtimeNode value is fail:%v\n", err)
+		return err
+	}
+
+	var info model.RegisterRuntime
+	if len(runtimeInfo.Kvs) > 0 {
+		if err = json.Unmarshal(runtimeInfo.Kvs[0].Value, &info); err != nil {
+			e.Warn().Msgf("Unmarshal runtiemInfo fail:%s", err)
+			return err
+		}
+		//rspState.Id = info.Id
+	}
+
 	if state.IsOneRuntime() {
-		if err = e.UpdateLocalAndGlobal(ctx, taskName, runtimeNode, rspState, state.Action); err != nil {
+		if err = e.UpdateLocalAndGlobal(ctx, taskName, runtimeNode, rspState, state.Action, info.Id); err != nil {
 			return err
 		}
 
 	} else if state.IsBroadcast() {
 
 		e.RuntimeNode.RuntimeNode.Range(func(key, val string) bool {
-			err = e.UpdateLocalAndGlobal(ctx, taskName, runtimeNode, rspState, state.Action)
+			err = e.UpdateLocalAndGlobal(ctx, taskName, runtimeNode, rspState, state.Action, info.Id)
 			return err == nil
 		})
 	} else {

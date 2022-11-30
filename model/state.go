@@ -115,7 +115,7 @@ func UpdateStateAck(value []byte, successed bool) ([]byte, error) {
 
 // 删除，更新，stop时调用
 // TODO 重构该函数, 形参可以聚合下
-func UpdateState(value []byte, runtimeNode string, state string, action string, req *Param, taskName string) ([]byte, error) {
+func UpdateState(value []byte, runtimeNode string, state string, action string, req *Param, taskName string, id string) ([]byte, error) {
 	s, err := ValueToState(value)
 	if err != nil {
 		return nil, err
@@ -127,6 +127,9 @@ func UpdateState(value []byte, runtimeNode string, state string, action string, 
 	if req != nil {
 		s.Lambda = req.IsLambda()
 		s.TaskName = req.Executer.TaskName
+	}
+	if len(id) > 0 {
+		s.Id = id
 	}
 	s.State = state
 	s.Action = action

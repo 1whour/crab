@@ -48,6 +48,7 @@ func (m *EtcdStore) NeedFix(ctx context.Context, state model.State) bool {
 	}
 
 	if len(runtimeInfo.Kvs) > 0 {
+
 		if err = json.Unmarshal(runtimeInfo.Kvs[0].Value, &info); err != nil {
 			m.Warn().Msgf("Unmarshal runtiemInfo fail:%s", err)
 		}
