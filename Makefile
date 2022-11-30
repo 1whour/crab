@@ -1,15 +1,15 @@
 all: build
 
 cluster:
-	- killall scheduler
+	- killall ktuo
 	- rm cluster.log
 	goreman start|tee -a cluster.log
 
 norace:
-	go build ./cmd/scheduler/scheduler.go
+	go build ./cmd/ktuo/ktuo.go
 
 build:
-	go build -race ./cmd/scheduler/scheduler.go
+	go build -race ./cmd/ktuo/ktuo.go
 
 test.shell:
 	bash ./testscript/run.sh

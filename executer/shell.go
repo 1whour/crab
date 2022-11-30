@@ -4,7 +4,7 @@ import (
 	"context"
 	"os/exec"
 
-	"github.com/gnh123/scheduler/model"
+	"github.com/gnh123/ktuo/model"
 )
 
 func init() {

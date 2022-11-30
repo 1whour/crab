@@ -1,7 +1,7 @@
 package lambda
 
 import (
-	"github.com/gnh123/scheduler/slog"
+	"github.com/gnh123/ktuo/slog"
 )
 
 type Option func(o *Lambda)

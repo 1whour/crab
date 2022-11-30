@@ -1,4 +1,5 @@
 /scheduler
+/ktuo
 *.log
 package.json
 /example/tmp_shell.yaml

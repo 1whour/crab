@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gnh123/scheduler/model"
+	"github.com/gnh123/ktuo/model"
 	"github.com/guonaihong/gout"
 )
 

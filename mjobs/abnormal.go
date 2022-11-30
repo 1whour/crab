@@ -3,7 +3,7 @@ package mjobs
 import (
 	"time"
 
-	"github.com/gnh123/scheduler/model"
+	"github.com/gnh123/ktuo/model"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 

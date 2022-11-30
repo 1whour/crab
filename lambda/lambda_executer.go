@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/antlabs/gstl/rwmap"
-	"github.com/gnh123/scheduler/executer"
-	"github.com/gnh123/scheduler/model"
-	"github.com/gnh123/scheduler/slog"
+	"github.com/gnh123/ktuo/executer"
+	"github.com/gnh123/ktuo/model"
+	"github.com/gnh123/ktuo/slog"
 	"golang.org/x/net/context"
 )
 

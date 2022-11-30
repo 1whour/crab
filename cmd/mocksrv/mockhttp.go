@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gnh123/scheduler/model"
+	"github.com/gnh123/ktuo/model"
 )
 
 // 本子命令主要是为了测试脚本而写

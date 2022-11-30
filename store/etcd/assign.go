@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gnh123/scheduler/model"
-	"github.com/gnh123/scheduler/utils"
+	"github.com/gnh123/ktuo/model"
+	"github.com/gnh123/ktuo/utils"
 	"go.etcd.io/etcd/client/v3/concurrency"
 )
 

@@ -1,22 +1,22 @@
 package main
 
 import (
-	"github.com/gnh123/scheduler/cmd/clicrud"
-	"github.com/gnh123/scheduler/cmd/etcd"
-	"github.com/gnh123/scheduler/cmd/mocksrv"
-	"github.com/gnh123/scheduler/cmd/status"
-	"github.com/gnh123/scheduler/gate"
-	"github.com/gnh123/scheduler/mjobs"
-	"github.com/gnh123/scheduler/runtime"
+	"github.com/gnh123/ktuo/cmd/clicrud"
+	"github.com/gnh123/ktuo/cmd/etcd"
+	"github.com/gnh123/ktuo/cmd/mocksrv"
+	"github.com/gnh123/ktuo/cmd/status"
+	"github.com/gnh123/ktuo/gate"
+	"github.com/gnh123/ktuo/mjobs"
+	"github.com/gnh123/ktuo/runtime"
 	"github.com/guonaihong/clop"
 )
 
-type scheduler struct {
+type ktuo struct {
 	// gate子命令
 	gate.Gate `clop:"subcommand" usage:"The gate service is responsible for connecting and processing requests"`
 	// runtime子命令
 	runtime.Runtime `clop:"subcommand" usage:"Runtime is a pre compiled module that performs tasks"`
-	// 从配置文件加载任务到scheduler集群中
+	// 从配置文件加载任务到ktuo集群中
 	clicrud.Start `clop:"subcommand" usage:"Start the current task from a configuration file"`
 	// 加载配置文件中停止当前任务
 	clicrud.Stop `clop:"subcommand" usage:"Stop current task from configuration file"`
@@ -35,6 +35,6 @@ type scheduler struct {
 }
 
 func main() {
-	s := scheduler{}
+	s := ktuo{}
 	clop.Bind(&s)
 }

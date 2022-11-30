@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/gnh123/scheduler/model"
+	"github.com/gnh123/ktuo/model"
 	"github.com/stretchr/testify/assert"
 
 	"gopkg.in/yaml.v3"

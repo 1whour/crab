@@ -3,7 +3,7 @@ package executer
 import (
 	"context"
 
-	"github.com/gnh123/scheduler/model"
+	"github.com/gnh123/ktuo/model"
 )
 
 // 留空，下个版本实现

@@ -1,5 +1,5 @@
-## scheduler
-scheduler是分布式调度框架，主要功能定时，延时，lambda等功能。可以基于DAG组织任务。
+## ktuo
+ktuo是分布式调度框架，主要功能定时，延时，lambda等功能。可以基于DAG组织任务。
 
 ## 进展
 开发中。。。
@@ -11,9 +11,11 @@ scheduler是分布式调度框架，主要功能定时，延时，lambda等功�
 
 ☑️ 大量的测试，让bug少之又少
 
+☑️  支持http, shell, 
+🔳 grpc(TODO)
+
 🔳 DAG支持(TODO)
 
-🔳 支持http, shell, grpc(TODO)
 
 
 ## 架构图
@@ -42,19 +44,19 @@ executer:
 ```
 ### 1. 创建任务
 ```bash
- ./scheduler start -f ./example/http.yaml -g gate_addr
+ ./ktuo start -f ./example/http.yaml -g gate_addr
 ```
 ### 2. 删除任务
 ```bash
-./scheduler rm -f ./example/http.yaml -g gate_addr
+./ktuo rm -f ./example/http.yaml -g gate_addr
 ```
 ### 3. 停止任务
 ```bash
-./scheduler stop -f ./example/http.yaml -g gate_addr
+./ktuo stop -f ./example/http.yaml -g gate_addr
 ```
 ### 4. 更新任务
 ```bash
-./scheduler update -f ./example/http.yaml -g gate_addr
+./ktuo update -f ./example/http.yaml -g gate_addr
 ```
 
 ### 二、shell任务配置
@@ -73,11 +75,11 @@ executer:
 
 ### 三、其它命令
 ```bash
-scheduler start 配置文件. #创建新的dag任务，并且运行
-scheduler stop 配置文件. #停止dag任务
-scheduler rm 配置文件. #删除dag任务
-scheduler run 配置文件. #运行已存在的任务，如果不存在会返回错误
-scheduler status 获取任务的状态
+ktuo start 配置文件. #创建新的dag任务，并且运行
+ktuo stop 配置文件. #停止dag任务
+ktuo rm 配置文件. #删除dag任务
+ktuo run 配置文件. #运行已存在的任务，如果不存在会返回错误
+ktuo status 获取任务的状态
 ```
 
 
@@ -114,7 +116,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/gnh123/scheduler/lambda"
+	"github.com/gnh123/ktuo/lambda"
 )
 
 func hello() (string, error) {
@@ -147,7 +149,7 @@ func main() {
 }
 ```
 
-#### 4.3 保存至scheduler
+#### 4.3 保存至ktuo
 ```yaml
-./scheduler start -f example/lambda.yaml -g 127.0.0.1:3535 -t 123456789
+./ktuo start -f example/lambda.yaml -g 127.0.0.1:3535 -t 123456789
 ```

@@ -1,4 +1,4 @@
-module github.com/gnh123/scheduler
+module github.com/gnh123/ktuo
 
 go 1.19
 

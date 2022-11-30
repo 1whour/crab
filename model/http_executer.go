@@ -1,5 +1,5 @@
 package model
 
 const (
-	DefaultExecuterHTTPKey = "scheduler-http-executer"
+	DefaultExecuterHTTPKey = "ktuo-http-executer"
 )

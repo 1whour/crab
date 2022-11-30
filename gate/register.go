@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/gnh123/scheduler/model"
-	"github.com/gnh123/scheduler/utils"
+	"github.com/gnh123/ktuo/model"
+	"github.com/gnh123/ktuo/utils"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -24,7 +24,7 @@ func (r *Gate) autoNewAddrAndRegister() {
 }
 
 // gate的地址
-// model.GateNodePrefix 注册到/scheduler/gate/node/gate_name
+// model.GateNodePrefix 注册到/ktuo/gate/node/gate_name
 func (r *Gate) registerGateNode() (err error) {
 	defer func() {
 		if err != nil {

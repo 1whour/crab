@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gnh123/scheduler/model"
+	"github.com/gnh123/ktuo/model"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
@@ -23,7 +23,7 @@ trigger:
   cron: "* * * * * *" #每秒触发一次
 executer:
   shell:
-    command: curl -v -X POST -H "scheduler-http-executer:D79DCF87-595A-4B18-B76F-9BD8277C35EF" -d "test hello" 127.0.0.1:8181/task #command和args的作用是等价的，唯一的区别是命令放在一个字符串或者slice里面。
+    command: curl -v -X POST -H "ktuo-http-executer:D79DCF87-595A-4B18-B76F-9BD8277C35EF" -d "test hello" 127.0.0.1:8181/task #command和args的作用是等价的，唯一的区别是命令放在一个字符串或者slice里面。
   `
 	var param model.Param
 	var err error
