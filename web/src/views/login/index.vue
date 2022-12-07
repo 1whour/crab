@@ -109,7 +109,7 @@ export default {
     }
     return {
       loginForm: {
-        username: 'admin111', // TODO删除
+        username: 'admin', // TODO删除
         password: '111111' // TODO删除
       },
       loginRules: {
