@@ -32,10 +32,16 @@ type Gate struct {
 	Level        string        `clop:"short;long" usage:"log level" default:"error"`
 	LeaseTime    time.Duration `clop:"long" usage:"lease time" default:"7s"`
 	WriteTime    time.Duration `clop:"long" usage:"write timeout" default:"4s"`
+	DSN          string        `clop:"long" usage:"database dsn"`
 
+	// etcd 租约id
 	leaseID clientv3.LeaseID
+	// 日志对象
 	*slog.Slog
+	// ctx
 	ctx context.Context
+	// 数据库对象
+	loginDb *LoginDB
 }
 
 func (g *Gate) NodeName() string {
@@ -51,6 +57,12 @@ var (
 func (r *Gate) init() (err error) {
 
 	r.getAddress()
+	// 初始化数据库
+	r.loginDb, err = newLoginDB(r.DSN)
+	if err != nil {
+		return err
+	}
+
 	r.ctx = context.TODO()
 	if r.Name == "" {
 		r.Name = uuid.New().String()
