@@ -6,6 +6,8 @@ github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuy
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk541a8SKzHPHnH3zbiI+7dagKZ0cgpgrD7Fyho=
+github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
+github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/antlabs/cronex v0.0.3 h1:2njQtohLeLD8WD0fgvEXKiQc4U1ExbuZR/4BfNtajmg=
 github.com/antlabs/cronex v0.0.3/go.mod h1:/M0GL9tEOVJCGOD4qZ0VCWgVKZrguVVc8vE3VaQBtXU=
@@ -103,10 +105,10 @@ github.com/gorilla/websocket v1.5.0 h1:PPwGk2jz7EePpoHN/+ClbZu8SPxiqlu12wZP/3sWm
 github.com/gorilla/websocket v1.5.0/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgfV/d3M/q6VIi02HzZEHgUlZvzk=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
-github.com/guonaihong/clop v0.2.7 h1:5hQCJWungccY/K9ugsd3coT1moxpW3MDnsJdWK8zU28=
-github.com/guonaihong/clop v0.2.7/go.mod h1:UKHLsZTl40VVQ31JcB8j9P9SM8NE78ZL6ePXyfeCmQE=
-github.com/guonaihong/gout v0.3.1 h1:pj/44Jw0TTmcHF2RjMaCWhKPwCH98YuQejbN15Hts/o=
-github.com/guonaihong/gout v0.3.1/go.mod h1:lhje0jRkh/gcIogrG22ENPITo9tylQa3kwD9eVxcDrk=
+github.com/guonaihong/clop v0.2.8 h1:OG9UhszYlYG8Ykts4PxpULoiUc1zUrb8JGtTzMm8TxA=
+github.com/guonaihong/clop v0.2.8/go.mod h1:UKHLsZTl40VVQ31JcB8j9P9SM8NE78ZL6ePXyfeCmQE=
+github.com/guonaihong/gout v0.3.2 h1:NhWukVDPi0Aia3yxT2n9fJ/HzJefTOsgdR2CZewFg1s=
+github.com/guonaihong/gout v0.3.2/go.mod h1:hPDZ021p6/8raFfnUEU81QoAjTiNJbVHxr/7SSDZdEc=
 github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD/E=
 github.com/jinzhu/inflection v1.0.0/go.mod h1:h+uFLlag+Qp1Va5pdKtLDYj+kHp5pxUVkryuEj+Srlc=
 github.com/jinzhu/now v1.1.4/go.mod h1:d3SSVoowX0Lcu0IBviAWJpolVfI5UJVZZ7cO71lE/z8=

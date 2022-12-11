@@ -8,8 +8,8 @@ require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/websocket v1.5.0
-	github.com/guonaihong/clop v0.2.7
-	github.com/guonaihong/gout v0.3.1
+	github.com/guonaihong/clop v0.2.8
+	github.com/guonaihong/gout v0.3.2
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/rs/zerolog v1.28.0
 	github.com/stretchr/testify v1.7.1
@@ -22,6 +22,7 @@ require (
 )
 
 require (
+	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/antlabs/stl v0.0.1 // indirect
 	github.com/antlabs/strsim v0.0.2 // indirect
 	github.com/antlabs/timer v0.0.10 // indirect
