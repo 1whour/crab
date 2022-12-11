@@ -14,6 +14,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -57,8 +59,15 @@ var (
 func (r *Gate) init() (err error) {
 
 	r.getAddress()
+
+	db, err := gorm.Open(mysql.New(mysql.Config{
+		DSN: r.DSN,
+	}))
+	if err != nil {
+		return err
+	}
 	// 初始化数据库
-	r.loginDb, err = newLoginDB(r.DSN)
+	r.loginDb, err = newLoginDB(db)
 	if err != nil {
 		return err
 	}
