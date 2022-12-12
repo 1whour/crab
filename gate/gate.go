@@ -13,12 +13,17 @@ import (
 	"github.com/gnh123/ktuo/utils"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/guonaihong/gutil/jwt"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 var upgrader = websocket.Upgrader{}
+
+const (
+	tokenHeader = "token"
+)
 
 // TODO, 规范下错误码
 
@@ -226,6 +231,20 @@ func (r *Gate) SubMain() {
 	g.DELETE(model.TASK_DELETE_URL, r.deleteTask)
 	g.POST(model.TASK_STOP_URL, r.stopTask)
 	g.GET(model.TASK_STATUS_URL, r.status)
+
+	g.Use(func(ctx *gin.Context) {
+		// 登录不检查token
+		if ctx.Request.URL.Path == model.UI_USERS_LOGIN {
+			return
+		}
+
+		token := ctx.Request.Header.Get(tokenHeader)
+		_, err := jwt.ParseToken(token, secretToken)
+		if err != nil {
+			ctx.Abort()
+			return
+		}
+	})
 
 	// 注册
 	g.POST(model.UI_USERS_REGISTER_URL, r.register)

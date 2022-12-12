@@ -10,9 +10,15 @@ import (
 )
 
 const (
-	secret     = "@@112233"
-	serverName = "ktuo"
+	secretToken = "@@112233"
+	serverName  = "ktuo"
 )
+
+type wrapLoginData struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    any    `json:"data"`
+}
 
 // 注册账号
 func (g *Gate) register(c *gin.Context) {
@@ -43,14 +49,16 @@ func (g *Gate) login(c *gin.Context) {
 		return
 	}
 
-	token, err := jwt.GenToken(time.Hour*24, serverName, secret)
+	token, err := jwt.GenToken(time.Hour*24, serverName, secretToken)
 	if err != nil {
 		g.error(c, 500, err.Error())
 		return
 	}
 
 	c.Header("token", token)
-	_ = rv
+	c.JSON(200, wrapLoginData{
+		Data: rv,
+	})
 }
 
 // 删除
@@ -65,6 +73,7 @@ func (g *Gate) deleteUser(c *gin.Context) {
 	lc := LoginCore{Model: gorm.Model{ID: uint(id)}}
 
 	g.loginDb.delete(&lc)
+	c.JSON(200, wrapLoginData{})
 }
 
 // 获取用户信息
@@ -82,7 +91,7 @@ func (g *Gate) getUserInfo(c *gin.Context) {
 		g.error(c, 500, err.Error())
 		return
 	}
-	c.JSON(200, rv)
+	c.JSON(200, wrapLoginData{Data: rv})
 }
 
 // 获取用户信息列表
@@ -99,5 +108,5 @@ func (g *Gate) GetUserInfoList(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, rv)
+	c.JSON(200, wrapLoginData{Data: rv})
 }
