@@ -7,6 +7,8 @@ import (
 	"gorm.io/gorm"
 )
 
+var column = []string{"id", "user_name", "email"}
+
 type Page struct {
 	Size int `form:"size"`
 	Page int `form:"page"`
@@ -25,8 +27,11 @@ type LoginCore struct {
 
 // 初始化
 func newLoginDB(db *gorm.DB) (*LoginDB, error) {
-
 	return &LoginDB{DB: db}, nil
+}
+
+func md5sum(s string) string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(s)))
 }
 
 // 插入数据
@@ -37,8 +42,23 @@ func (l *LoginDB) insert(login *LoginCore) error {
 }
 
 // 查询数据
-func (l *LoginDB) query(login *LoginCore) error {
-	return l.DB.Where("user_name = ? AND password = ?", login.UserName, login.Password).First(login).Error
+func (l *LoginDB) queryNeedPassword(login LoginCore) (ld LoginCore, err error) {
+	err = l.DB.Model(&LoginCore{}).Select(column).Where("user_name = ? AND password = ?", login.UserName, md5sum(login.Password)).First(&ld).Error
+	ld.Password = ""
+	return
+}
+
+// 查询数据
+func (l *LoginDB) query(login LoginCore) (ld LoginCore, err error) {
+	err = l.DB.Model(&LoginCore{}).Select(column).Where("user_name = ?", login.UserName).First(&ld).Error
+	ld.Password = ""
+	return
+}
+
+// 更新
+func (l *LoginDB) update(login *LoginCore) (err error) {
+	err = l.DB.Model(&LoginCore{}).Where("id = ?", login.ID).Updates(login).Error
+	return
 }
 
 // 删除用户
@@ -48,8 +68,8 @@ func (l *LoginDB) delete(login *LoginCore) error {
 }
 
 // 查看用户信息
-func (l *LoginDB) userInfo(p Page) (rv []LoginDB, err error) {
-	err = l.DB.Offset(p.Page).Limit(p.Size).Find(&rv).Error
+func (l *LoginDB) queryAndPage(p Page) (rv []LoginCore, err error) {
+	err = l.DB.Debug().Model(&LoginCore{}).Select(column).Offset(p.Page - 1).Limit(p.Size).Find(&rv).Error
 	return
 }
 

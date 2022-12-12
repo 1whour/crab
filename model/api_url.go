@@ -18,4 +18,6 @@ const (
 	UI_USERS_DELETE_URL = "/ktuo/ui/users/:id"
 	// 获取一批用户信息或者单个，如果带name就过滤单个用户的信息
 	UI_USERS_INFO = "/ktuo/ui/users"
+	// 获取用户列表
+	UI_USERS_INFO_LIST = "/ktuo/ui/users/list"
 )

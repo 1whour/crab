@@ -227,6 +227,17 @@ func (r *Gate) SubMain() {
 	g.POST(model.TASK_STOP_URL, r.stopTask)
 	g.GET(model.TASK_STATUS_URL, r.status)
 
+	// 注册
+	g.POST(model.UI_USERS_REGISTER_URL, r.register)
+	// 登录
+	g.POST(model.UI_USERS_LOGIN, r.login)
+	// 删除用户
+	g.DELETE(model.UI_USERS_DELETE_URL, r.deleteUser)
+	// 获取某个用户
+	g.GET(model.UI_USERS_INFO, r.getUserInfo)
+	// 获取用户列表
+	g.GET(model.UI_USERS_INFO_LIST, r.GetUserInfoList)
+
 	r.Debug().Msgf("gate:serverAddr:%s\n", r.ServerAddr)
 	for i := 0; i < 3; i++ {
 		if err := g.Run(r.ServerAddr); err != nil {
