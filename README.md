@@ -11,7 +11,8 @@ ktuo是分布式调度框架，主要功能定时，延时，lambda等功能。�
 
 ☑️ 大量的测试，让bug少之又少
 
-☑️  支持http, shell, 
+☑️  支持http, shell
+
 🔳 grpc(TODO)
 
 🔳 DAG支持(TODO)
