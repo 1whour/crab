@@ -17,6 +17,7 @@ const (
 type wrapLoginData struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+	Token   string `json:"token"`
 	Data    any    `json:"data"`
 }
 
@@ -63,9 +64,10 @@ func (g *Gate) login(c *gin.Context) {
 		return
 	}
 
-	c.Header("token", token)
+	//c.Header("token", token)
 	c.JSON(200, wrapLoginData{
-		Data: rv,
+		Data:  rv,
+		Token: token,
 	})
 }
 

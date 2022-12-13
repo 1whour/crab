@@ -226,6 +226,7 @@ func (r *Gate) SubMain() {
 
 	gin.SetMode(gin.ReleaseMode)
 	g := gin.New()
+	// 跨域
 	g.Use(cors.Default())
 	g.GET(model.TASK_STREAM_URL, r.stream) //流式接口，主动推送任务至runtime
 	g.POST(model.TASK_CREATE_URL, r.createTask)
@@ -236,7 +237,7 @@ func (r *Gate) SubMain() {
 
 	g.Use(func(ctx *gin.Context) {
 		// 登录不检查token
-		if ctx.Request.URL.Path == model.UI_USERS_LOGIN {
+		if ctx.Request.URL.Path == model.UI_USER_LOGIN {
 			return
 		}
 
@@ -249,13 +250,13 @@ func (r *Gate) SubMain() {
 	})
 
 	// 注册
-	g.POST(model.UI_USERS_REGISTER_URL, r.register)
+	g.POST(model.UI_USER_REGISTER_URL, r.register)
 	// 登录
-	g.POST(model.UI_USERS_LOGIN, r.login)
+	g.POST(model.UI_USER_LOGIN, r.login)
 	// 删除用户
-	g.DELETE(model.UI_USERS_DELETE_URL, r.deleteUser)
+	g.DELETE(model.UI_USER_DELETE_URL, r.deleteUser)
 	// 获取某个用户
-	g.GET(model.UI_USERS_INFO, r.getUserInfo)
+	g.GET(model.UI_USER_INFO, r.getUserInfo)
 	// 获取用户列表
 	g.GET(model.UI_USERS_INFO_LIST, r.GetUserInfoList)
 

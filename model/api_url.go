@@ -11,13 +11,13 @@ const (
 
 	// user 管理相关接口
 	// 注册新用户, POST
-	UI_USERS_REGISTER_URL = "/ktuo/ui/users/register"
+	UI_USER_REGISTER_URL = "/ktuo/ui/user/register"
 	// 用户登录, POST
-	UI_USERS_LOGIN = "/ktuo/ui/users/login"
+	UI_USER_LOGIN = "/ktuo/ui/user/login"
 	// 删除用户, DELETE
-	UI_USERS_DELETE_URL = "/ktuo/ui/users/:id"
+	UI_USER_DELETE_URL = "/ktuo/ui/user/:id"
 	// 获取一批用户信息或者单个，如果带name就过滤单个用户的信息
-	UI_USERS_INFO = "/ktuo/ui/users"
+	UI_USER_INFO = "/ktuo/ui/user"
 	// 获取用户列表
 	UI_USERS_INFO_LIST = "/ktuo/ui/users/list"
 )
