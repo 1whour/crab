@@ -20,8 +20,8 @@ type LoginDB struct {
 
 type LoginCore struct {
 	gorm.Model
-	UserName string `gorm:"index:,unique" json:"userName" binding:"required"`
-	Email    string `gorm:"index:,unique" json:"email" binding:"required"`
+	UserName string `gorm:"index:,unique" json:"username" binding:"required"`
+	Email    string `gorm:"index:,unique" json:"email"`
 	Password string `json:"password" binding:"required"`
 }
 
@@ -43,8 +43,7 @@ func (l *LoginDB) insert(login *LoginCore) error {
 
 // 查询数据
 func (l *LoginDB) queryNeedPassword(login LoginCore) (ld LoginCore, err error) {
-	err = l.DB.Model(&LoginCore{}).Select(column).Where("user_name = ? AND password = ?", login.UserName, md5sum(login.Password)).First(&ld).Error
-	ld.Password = ""
+	err = l.DB.Model(&LoginCore{}).Select(column, "password").Where("user_name = ? AND password = ?", login.UserName, md5sum(login.Password)).First(&ld).Error
 	return
 }
 

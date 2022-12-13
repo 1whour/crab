@@ -28,6 +28,7 @@ func (g *Gate) register(c *gin.Context) {
 		return
 	}
 
+	g.Debug().Msgf("register info :%v", lc)
 	if err := g.loginDb.insert(&lc); err != nil {
 		g.error(c, 500, err.Error())
 		return
@@ -38,13 +39,20 @@ func (g *Gate) register(c *gin.Context) {
 func (g *Gate) login(c *gin.Context) {
 	lc := LoginCore{}
 
-	rv, err := g.loginDb.query(lc)
+	if err := c.ShouldBindJSON(&lc); err != nil {
+		g.error(c, 500, err.Error())
+		return
+	}
+
+	rv, err := g.loginDb.queryNeedPassword(lc)
 	if err != nil {
 		g.error(c, 500, err.Error())
 		return
 	}
 
 	if rv.UserName != lc.UserName || rv.Password != md5sum(lc.Password) {
+		g.Error().Msgf("rv.UserName:(%s):req.UserName(%s), rv.Password:(%s), md5sum(%s)", rv.UserName, lc.UserName,
+			rv.Password, md5sum(lc.Password))
 		g.error(c, 500, "wrong account")
 		return
 	}

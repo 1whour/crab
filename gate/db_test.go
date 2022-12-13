@@ -42,7 +42,7 @@ func Test_Login_Create(t *testing.T) {
 	assert.Error(t, err)
 
 	rv, err := login.queryNeedPassword(LoginCore{UserName: "guo", Password: "123"})
-	assert.Equal(t, LoginCore{Model: gorm.Model{ID: 1}, UserName: "guo", Email: "1@qq.com"}, rv)
+	assert.Equal(t, LoginCore{Model: gorm.Model{ID: 1}, UserName: "guo", Email: "1@qq.com", Password: md5sum("123")}, rv)
 	assert.NoError(t, err)
 }
 
@@ -108,7 +108,7 @@ func Test_Login_GetList(t *testing.T) {
 
 	insertAll := []LoginCore{}
 	for i := 0; i < 15; i++ {
-		val := LoginCore{UserName: fmt.Sprintf("g%d", i), Email: fmt.Sprintf("%d@x.com", i), Password: "1"}
+		val := LoginCore{UserName: fmt.Sprintf("g%d", i), Email: fmt.Sprintf("%d@x.com", i), Password: "111111"}
 		err = login.insert(&val)
 		val.Password = md5sum(val.Password)
 		insertAll = append(insertAll, val)

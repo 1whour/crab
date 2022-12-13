@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gnh123/ktuo/model"
 	"github.com/gnh123/ktuo/slog"
@@ -39,7 +40,7 @@ type Gate struct {
 	Level        string        `clop:"short;long" usage:"log level" default:"error"`
 	LeaseTime    time.Duration `clop:"long" usage:"lease time" default:"7s"`
 	WriteTime    time.Duration `clop:"long" usage:"write timeout" default:"4s"`
-	DSN          string        `clop:"long" usage:"database dsn"`
+	DSN          string        `clop:"--dsn" usage:"database dsn" valid:"requried"`
 
 	// etcd 租约id
 	leaseID clientv3.LeaseID
@@ -63,6 +64,7 @@ var (
 
 func (r *Gate) init() (err error) {
 
+	r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("gate", r.Name)
 	r.getAddress()
 
 	db, err := gorm.Open(mysql.New(mysql.Config{
@@ -81,7 +83,6 @@ func (r *Gate) init() (err error) {
 	if r.Name == "" {
 		r.Name = uuid.New().String()
 	}
-	r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("gate", r.Name)
 
 	if r.LeaseTime < model.RuntimeKeepalive {
 		r.LeaseTime = model.RuntimeKeepalive + time.Second
@@ -225,6 +226,7 @@ func (r *Gate) SubMain() {
 
 	gin.SetMode(gin.ReleaseMode)
 	g := gin.New()
+	g.Use(cors.Default())
 	g.GET(model.TASK_STREAM_URL, r.stream) //流式接口，主动推送任务至runtime
 	g.POST(model.TASK_CREATE_URL, r.createTask)
 	g.PUT(model.TASK_UPDATE_URL, r.updateTask)
