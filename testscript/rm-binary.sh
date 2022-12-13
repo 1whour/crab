@@ -11,4 +11,7 @@
 
 #https://www.bilibili.com/read/cv17239503/
 #cluster.log.bak
-git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.bak' --prune-empty --tag-name-filter cat -- --all
+#git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.js' --prune-empty --tag-name-filter cat -- --all
+#git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.vue' --prune-empty --tag-name-filter cat -- --all
+#git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.css' --prune-empty --tag-name-filter cat -- --all
+git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.svg' --prune-empty --tag-name-filter cat -- --all
