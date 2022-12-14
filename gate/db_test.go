@@ -68,7 +68,7 @@ func Test_Login_Update(t *testing.T) {
 	var err error
 	login := testInitTable(t)
 
-	err = login.insert(&LoginCore{UserName: "guo", Password: "123", Email: "1@qq.com"})
+	err = login.insert(&LoginCore{UserName: "guo", Password: "123", Email: "1@qq.com", Rule: "admin"})
 	assert.NoError(t, err)
 
 	rv, err := login.query(LoginCore{UserName: "guo", Password: "123"})
@@ -108,7 +108,7 @@ func Test_Login_GetList(t *testing.T) {
 
 	insertAll := []LoginCore{}
 	for i := 0; i < 15; i++ {
-		val := LoginCore{UserName: fmt.Sprintf("g%d", i), Email: fmt.Sprintf("%d@x.com", i), Password: "111111"}
+		val := LoginCore{UserName: fmt.Sprintf("g%d", i), Email: fmt.Sprintf("%d@x.com", i), Password: "111111", Rule: "admin"}
 		err = login.insert(&val)
 		val.Password = md5sum(val.Password)
 		insertAll = append(insertAll, val)

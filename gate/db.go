@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var column = []string{"id", "user_name", "email"}
+var column = []string{"id", "user_name", "email", "rule"}
 
 type Page struct {
 	Size int `form:"size"`
@@ -20,9 +20,10 @@ type LoginDB struct {
 
 type LoginCore struct {
 	gorm.Model
-	UserName string `gorm:"index:,unique" json:"username" binding:"required"`
+	UserName string `gorm:"index:,unique;not null" json:"username" binding:"required"`
 	Email    string `gorm:"index:,unique" json:"email"`
-	Password string `json:"password" binding:"required"`
+	Password string `gorm:"type:varchar(50)" json:"password" binding:"required"`
+	Rule     string `gorm:"type:varchar(10)" json:"rule"`
 }
 
 // 初始化

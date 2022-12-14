@@ -3,6 +3,7 @@ package gate
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -23,7 +24,8 @@ import (
 var upgrader = websocket.Upgrader{}
 
 const (
-	tokenHeader = "token"
+	tokenQuery  = "token"
+	tokenHeader = "X-Token"
 )
 
 // TODO, 规范下错误码
@@ -227,7 +229,15 @@ func (r *Gate) SubMain() {
 	gin.SetMode(gin.ReleaseMode)
 	g := gin.New()
 	// 跨域
-	g.Use(cors.Default())
+	config := cors.Config{
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", tokenHeader},
+		AllowCredentials: false,
+		AllowAllOrigins:  true,
+		MaxAge:           12 * time.Hour,
+	}
+
+	g.Use(cors.New(config))
 	g.GET(model.TASK_STREAM_URL, r.stream) //流式接口，主动推送任务至runtime
 	g.POST(model.TASK_CREATE_URL, r.createTask)
 	g.PUT(model.TASK_UPDATE_URL, r.updateTask)
@@ -236,12 +246,19 @@ func (r *Gate) SubMain() {
 	g.GET(model.TASK_STATUS_URL, r.status)
 
 	g.Use(func(ctx *gin.Context) {
+		if ctx.Request.Method == http.MethodOptions {
+			return
+		}
+
 		// 登录不检查token
 		if ctx.Request.URL.Path == model.UI_USER_LOGIN {
 			return
 		}
 
-		token := ctx.Request.Header.Get(tokenHeader)
+		token := ctx.Query(tokenQuery)
+		if len(token) == 0 {
+			token = ctx.GetHeader(tokenHeader)
+		}
 		_, err := jwt.ParseToken(token, secretToken)
 		if err != nil {
 			ctx.Abort()

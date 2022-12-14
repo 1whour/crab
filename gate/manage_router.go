@@ -14,10 +14,21 @@ const (
 	serverName  = "ktuo"
 )
 
-type wrapLoginData struct {
+type userInfoData struct {
+	Token        string   `json:"token"`
+	Introduction string   `json:"introduction"`
+	Avatar       string   `json:"avatar"`
+	Name         string   `json:"name"`
+	Rule         []string `json:"rule"`
+}
+
+type wrapToken struct {
+	Token string `json:"token"`
+}
+
+type wrapData struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
-	Token   string `json:"token"`
 	Data    any    `json:"data"`
 }
 
@@ -58,16 +69,15 @@ func (g *Gate) login(c *gin.Context) {
 		return
 	}
 
-	token, err := jwt.GenToken(time.Hour*24, serverName, secretToken)
+	token, err := jwt.GenToken(time.Hour*24, lc.UserName, secretToken)
 	if err != nil {
 		g.error(c, 500, err.Error())
 		return
 	}
 
 	//c.Header("token", token)
-	c.JSON(200, wrapLoginData{
-		Data:  rv,
-		Token: token,
+	c.JSON(200, wrapData{
+		Data: wrapToken{token},
 	})
 }
 
@@ -83,25 +93,30 @@ func (g *Gate) deleteUser(c *gin.Context) {
 	lc := LoginCore{Model: gorm.Model{ID: uint(id)}}
 
 	g.loginDb.delete(&lc)
-	c.JSON(200, wrapLoginData{})
+	c.JSON(200, wrapData{})
 }
 
 // 获取用户信息
 func (g *Gate) getUserInfo(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+
+	val, err := jwt.ParseToken(c.Request.Header.Get(tokenHeader), secretToken)
 	if err != nil {
 		g.error(c, 500, err.Error())
 		return
 	}
 
-	lc := LoginCore{Model: gorm.Model{ID: uint(id)}}
+	g.Debug().Msgf("token:%#v", val)
+	lc := LoginCore{UserName: val.Issuer}
 	rv, err := g.loginDb.query(lc)
 	if err != nil {
 		g.error(c, 500, err.Error())
 		return
 	}
-	c.JSON(200, wrapLoginData{Data: rv})
+	c.JSON(200, wrapData{
+		Data: userInfoData{
+			Rule: []string{rv.Rule}},
+	},
+	)
 }
 
 // 获取用户信息列表
@@ -118,5 +133,5 @@ func (g *Gate) GetUserInfoList(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, wrapLoginData{Data: rv})
+	c.JSON(200, wrapData{Data: rv})
 }
