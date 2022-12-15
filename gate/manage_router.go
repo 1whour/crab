@@ -32,6 +32,11 @@ type wrapData struct {
 	Data    any    `json:"data"`
 }
 
+type userList struct {
+	Total int64 `json:"total"`
+	Items any   `json:"items"`
+}
+
 // 注册账号
 func (g *Gate) register(c *gin.Context) {
 	lc := LoginCore{}
@@ -131,11 +136,19 @@ func (g *Gate) GetUserInfoList(c *gin.Context) {
 		return
 	}
 
-	rv, err := g.loginDb.queryAndPage(p)
+	// 默认10
+	if p.Limit == 0 {
+		p.Limit = 10
+	}
+
+	rv, count, err := g.loginDb.queryAndPage(p)
 	if err != nil {
 		g.error(c, 500, err.Error())
 		return
 	}
 
-	c.JSON(200, wrapData{Data: rv})
+	c.JSON(200, wrapData{Data: userList{
+		Total: count,
+		Items: rv,
+	}})
 }
