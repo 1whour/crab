@@ -81,6 +81,10 @@ func (g *Gate) login(c *gin.Context) {
 	})
 }
 
+func (g *Gate) logout(c *gin.Context) {
+	c.JSON(200, wrapData{})
+}
+
 // 删除
 func (g *Gate) deleteUser(c *gin.Context) {
 	idStr := c.Param("id")

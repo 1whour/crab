@@ -14,6 +14,8 @@ const (
 	UI_USER_REGISTER_URL = "/ktuo/ui/user/register"
 	// 用户登录, POST
 	UI_USER_LOGIN = "/ktuo/ui/user/login"
+	// 退出
+	UI_USER_LOGOUT = "/ktuo/ui/user/logout"
 	// 删除用户, DELETE
 	UI_USER_DELETE_URL = "/ktuo/ui/user/:id"
 	// 获取一批用户信息或者单个，如果带name就过滤单个用户的信息
