@@ -3,7 +3,6 @@ package gate
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -246,9 +245,6 @@ func (r *Gate) SubMain() {
 	g.GET(model.TASK_STATUS_URL, r.status)
 
 	g.Use(func(ctx *gin.Context) {
-		if ctx.Request.Method == http.MethodOptions {
-			return
-		}
 
 		// 登录不检查token
 		if ctx.Request.URL.Path == model.UI_USER_LOGIN {
