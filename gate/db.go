@@ -13,8 +13,9 @@ var (
 )
 
 type Page struct {
-	Limit int `form:"limit"`
-	Page  int `form:"page"`
+	Limit int    `form:"limit"`
+	Page  int    `form:"page"`
+	Sort  string `form:"sort"`
 }
 
 type LoginDB struct {
@@ -82,7 +83,13 @@ func (l *LoginDB) queryAndPage(p Page, needPassword bool) (rv []LoginCore, count
 	if needPassword {
 		c = columnWithPassword
 	}
-	err = l.DB.Debug().Model(&LoginCore{}).Select(c).Offset(p.Page - 1).Limit(p.Limit).Find(&rv).Error
+	order := ""
+	if len(p.Sort) > 0 {
+		if p.Sort[0] == '-' {
+			order = p.Sort[1:] + " desc"
+		}
+	}
+	err = l.DB.Debug().Model(&LoginCore{}).Select(c).Order(order).Offset(p.Page - 1).Limit(p.Limit).Find(&rv).Error
 	if err != nil {
 		return
 	}
