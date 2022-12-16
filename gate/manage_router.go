@@ -1,12 +1,11 @@
 package gate
 
 import (
-	"strconv"
 	"time"
 
+	"github.com/antlabs/deepcopy"
 	"github.com/gin-gonic/gin"
 	"github.com/guonaihong/gutil/jwt"
-	"gorm.io/gorm"
 )
 
 const (
@@ -41,15 +40,16 @@ type userList struct {
 func (g *Gate) register(c *gin.Context) {
 	lc := LoginCore{}
 	if err := c.ShouldBindJSON(&lc); err != nil {
-		g.error(c, 500, err.Error())
+		g.error2(c, 500, err.Error())
 		return
 	}
 
 	g.Debug().Msgf("register info :%v", lc)
 	if err := g.loginDb.insert(&lc); err != nil {
-		g.error(c, 500, err.Error())
+		g.error2(c, 500, err.Error())
 		return
 	}
+	c.JSON(200, wrapData{Data: lc})
 }
 
 // 登录
@@ -90,18 +90,37 @@ func (g *Gate) logout(c *gin.Context) {
 	c.JSON(200, wrapData{})
 }
 
-// 删除
-func (g *Gate) deleteUser(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+func (g *Gate) updateUser(c *gin.Context) {
+
+	lc := LoginCore{}
+
+	err := c.ShouldBindJSON(&lc)
 	if err != nil {
 		g.error(c, 500, err.Error())
 		return
 	}
 
-	lc := LoginCore{Model: gorm.Model{ID: uint(id)}}
+	lc.Password = md5sum(lc.Password)
+	g.loginDb.update(&lc)
+	c.JSON(200, wrapData{})
+}
 
-	g.loginDb.delete(&lc)
+// 删除
+func (g *Gate) deleteUser(c *gin.Context) {
+
+	lc := LoginCoreDelete{}
+
+	err := c.ShouldBindJSON(&lc)
+	if err != nil {
+		g.error2(c, 500, err.Error())
+		return
+	}
+
+	//lc := LoginCore{Model: gorm.Model{ID: uint(lc.ID)}}
+
+	lc2 := LoginCore{}
+	deepcopy.Copy(&lc2, &lc).Do()
+	g.loginDb.delete(&lc2)
 	c.JSON(200, wrapData{})
 }
 
@@ -141,7 +160,7 @@ func (g *Gate) GetUserInfoList(c *gin.Context) {
 		p.Limit = 10
 	}
 
-	rv, count, err := g.loginDb.queryAndPage(p)
+	rv, count, err := g.loginDb.queryAndPage(p, true)
 	if err != nil {
 		g.error(c, 500, err.Error())
 		return

@@ -120,6 +120,13 @@ func (r *Gate) ok(c *gin.Context, msg string) {
 	c.JSON(200, gin.H{"code": 0, "message": ""})
 }
 
+func (r *Gate) error2(c *gin.Context, code int, format string, a ...any) {
+
+	msg := fmt.Sprintf(format, a...)
+	r.Error().Caller(1).Msg(msg)
+	c.JSON(200, gin.H{"code": code, "message": msg})
+}
+
 // 简单的包装函数
 func (r *Gate) error(c *gin.Context, code int, format string, a ...any) {
 
@@ -270,6 +277,8 @@ func (r *Gate) SubMain() {
 	g.POST(model.UI_USER_LOGOUT, r.logout)
 	// 删除用户
 	g.DELETE(model.UI_USER_DELETE_URL, r.deleteUser)
+	// 更新用户
+	g.PUT(model.UI_USER_UPDATE, r.updateUser)
 	// 获取某个用户
 	g.GET(model.UI_USER_INFO, r.getUserInfo)
 	// 获取用户列表

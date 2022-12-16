@@ -116,7 +116,7 @@ func Test_Login_GetList(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	all, _, err := login.queryAndPage(Page{Limit: 10, Page: 1})
+	all, _, err := login.queryAndPage(Page{Limit: 10, Page: 1}, false)
 	assert.NotEqual(t, len(all), 0)
 	for i, v := range insertAll[:10] {
 		assert.Equal(t, v.UserName, all[i].UserName)

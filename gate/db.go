@@ -21,6 +21,12 @@ type LoginDB struct {
 	DB *gorm.DB
 }
 
+type LoginCoreDelete struct {
+	gorm.Model
+	UserName string `gorm:"index:,unique;not null" json:"username" binding:"required"`
+	Email    string `gorm:"index:,unique" json:"email"`
+}
+
 type LoginCore struct {
 	gorm.Model
 	UserName string `gorm:"index:,unique;not null" json:"username" binding:"required"`
@@ -64,15 +70,19 @@ func (l *LoginDB) update(login *LoginCore) (err error) {
 	return
 }
 
-// 删除用户
+// 删除用户, 真删除
 func (l *LoginDB) delete(login *LoginCore) error {
-	l.DB.Delete(login)
+	l.DB.Unscoped().Delete(login)
 	return nil
 }
 
 // 查看用户信息
-func (l *LoginDB) queryAndPage(p Page) (rv []LoginCore, count int64, err error) {
-	err = l.DB.Debug().Model(&LoginCore{}).Select(column).Offset(p.Page - 1).Limit(p.Limit).Find(&rv).Error
+func (l *LoginDB) queryAndPage(p Page, needPassword bool) (rv []LoginCore, count int64, err error) {
+	c := column
+	if needPassword {
+		c = columnWithPassword
+	}
+	err = l.DB.Debug().Model(&LoginCore{}).Select(c).Offset(p.Page - 1).Limit(p.Limit).Find(&rv).Error
 	if err != nil {
 		return
 	}
