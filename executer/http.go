@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/antlabs/gstl/ifop"
-	"github.com/gnh123/ktuo/model"
+	"github.com/1whour/ktuo/model"
 	"github.com/guonaihong/gout"
 	"github.com/guonaihong/gout/dataflow"
 )

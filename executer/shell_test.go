@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gnh123/ktuo/model"
+	"github.com/1whour/ktuo/model"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )

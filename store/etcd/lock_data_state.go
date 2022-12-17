@@ -3,7 +3,7 @@ package etcd
 import (
 	"context"
 
-	"github.com/gnh123/ktuo/model"
+	"github.com/1whour/ktuo/model"
 )
 
 func (e *EtcdStore) LockCreateDataAndState(ctx context.Context, taskName string, req *model.Param) error {

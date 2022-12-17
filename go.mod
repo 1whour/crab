@@ -1,4 +1,4 @@
-module github.com/gnh123/ktuo
+module github.com/1whour/ktuo
 
 go 1.19
 

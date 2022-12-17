@@ -73,7 +73,7 @@ func Test_Login_Update(t *testing.T) {
 
 	rv, err := login.query(LoginCore{UserName: "guo", Password: "123"})
 
-	rv.UserName = "gnh123"
+	rv.UserName = "1whour"
 	rv.Email = "2@qq.com"
 	err = login.update(&rv)
 	assert.NoError(t, err)

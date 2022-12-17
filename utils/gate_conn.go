@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gnh123/ktuo/model"
-	"github.com/gnh123/ktuo/slog"
+	"github.com/1whour/ktuo/model"
+	"github.com/1whour/ktuo/slog"
 	"github.com/gorilla/websocket"
 )
 

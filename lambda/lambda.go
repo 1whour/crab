@@ -6,10 +6,10 @@ import (
 	"runtime"
 
 	"github.com/antlabs/gstl/rwmap"
-	"github.com/gnh123/ktuo/executer"
-	"github.com/gnh123/ktuo/model"
-	myruntime "github.com/gnh123/ktuo/runtime"
-	"github.com/gnh123/ktuo/slog"
+	"github.com/1whour/ktuo/executer"
+	"github.com/1whour/ktuo/model"
+	myruntime "github.com/1whour/ktuo/runtime"
+	"github.com/1whour/ktuo/slog"
 	"golang.org/x/net/context"
 )
 

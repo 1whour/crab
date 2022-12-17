@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/gnh123/ktuo/cmd/clicrud"
-	"github.com/gnh123/ktuo/cmd/etcd"
-	"github.com/gnh123/ktuo/cmd/mocksrv"
-	"github.com/gnh123/ktuo/cmd/status"
-	"github.com/gnh123/ktuo/gate"
-	"github.com/gnh123/ktuo/mjobs"
-	"github.com/gnh123/ktuo/runtime"
+	"github.com/1whour/ktuo/cmd/clicrud"
+	"github.com/1whour/ktuo/cmd/etcd"
+	"github.com/1whour/ktuo/cmd/mocksrv"
+	"github.com/1whour/ktuo/cmd/status"
+	"github.com/1whour/ktuo/gate"
+	"github.com/1whour/ktuo/mjobs"
+	"github.com/1whour/ktuo/runtime"
 	"github.com/guonaihong/clop"
 )
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gnh123/ktuo/model"
+	"github.com/1whour/ktuo/model"
 	"github.com/olekukonko/tablewriter"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"golang.org/x/exp/slices"

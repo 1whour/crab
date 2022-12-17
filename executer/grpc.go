@@ -3,7 +3,7 @@ package executer
 import (
 	"context"
 
-	"github.com/gnh123/ktuo/model"
+	"github.com/1whour/ktuo/model"
 )
 
 // 留空，下个版本实现
