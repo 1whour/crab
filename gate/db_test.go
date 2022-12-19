@@ -13,7 +13,7 @@ import (
 
 func testInitTable(t *testing.T) *LoginDB {
 	passwd := os.Getenv("KTUO_MYSQL_PASSWD")
-	dsn := fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/ktuo?charset=utf8mb4&parseTime=True&loc=Local", passwd)
+	dsn := fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/crab?charset=utf8mb4&parseTime=True&loc=Local", passwd)
 
 	db, err := gorm.Open(mysql.New(mysql.Config{
 		DSN: dsn,

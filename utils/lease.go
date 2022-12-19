@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/1whour/ktuo/slog"
+	"github.com/1whour/crab/slog"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 

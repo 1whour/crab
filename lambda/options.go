@@ -1,7 +1,7 @@
 package lambda
 
 import (
-	"github.com/1whour/ktuo/slog"
+	"github.com/1whour/crab/slog"
 )
 
 type Option func(o *Lambda)

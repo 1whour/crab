@@ -1,7 +1,7 @@
 .idea
 /scheduler
 node_modules
-/ktuo
+/crab
 *.log
 package.json
 /example/tmp_shell.yaml

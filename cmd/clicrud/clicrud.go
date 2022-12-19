@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/1whour/ktuo/model"
+	"github.com/1whour/crab/model"
 	"github.com/guonaihong/gout"
 	"gopkg.in/yaml.v3"
 )

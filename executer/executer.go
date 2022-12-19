@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/1whour/ktuo/model"
+	"github.com/1whour/crab/model"
 )
 
 type Executer interface {

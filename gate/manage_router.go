@@ -10,7 +10,7 @@ import (
 
 const (
 	secretToken = "@@112233"
-	serverName  = "ktuo"
+	serverName  = "crab"
 )
 
 type userInfoData struct {

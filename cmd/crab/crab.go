@@ -1,22 +1,22 @@
 package main
 
 import (
-	"github.com/1whour/ktuo/cmd/clicrud"
-	"github.com/1whour/ktuo/cmd/etcd"
-	"github.com/1whour/ktuo/cmd/mocksrv"
-	"github.com/1whour/ktuo/cmd/status"
-	"github.com/1whour/ktuo/gate"
-	"github.com/1whour/ktuo/mjobs"
-	"github.com/1whour/ktuo/runtime"
+	"github.com/1whour/crab/cmd/clicrud"
+	"github.com/1whour/crab/cmd/etcd"
+	"github.com/1whour/crab/cmd/mocksrv"
+	"github.com/1whour/crab/cmd/status"
+	"github.com/1whour/crab/gate"
+	"github.com/1whour/crab/mjobs"
+	"github.com/1whour/crab/runtime"
 	"github.com/guonaihong/clop"
 )
 
-type ktuo struct {
+type crab struct {
 	// gate子命令
 	gate.Gate `clop:"subcommand" usage:"The gate service is responsible for connecting and processing requests"`
 	// runtime子命令
 	runtime.Runtime `clop:"subcommand" usage:"Runtime is a pre compiled module that performs tasks"`
-	// 从配置文件加载任务到ktuo集群中
+	// 从配置文件加载任务到crab集群中
 	clicrud.Start `clop:"subcommand" usage:"Start the current task from a configuration file"`
 	// 加载配置文件中停止当前任务
 	clicrud.Stop `clop:"subcommand" usage:"Stop current task from configuration file"`
@@ -32,9 +32,10 @@ type ktuo struct {
 	mocksrv.MockSrv `clop:"subcommand" usage:"mock server"`
 	// 查看任务状态
 	status.Status `clop:"subcommand" usage:"status"`
+	// server子命令
 }
 
 func main() {
-	s := ktuo{}
+	s := crab{}
 	clop.Bind(&s)
 }

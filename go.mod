@@ -1,4 +1,4 @@
-module github.com/1whour/ktuo
+module github.com/1whour/crab
 
 go 1.19
 

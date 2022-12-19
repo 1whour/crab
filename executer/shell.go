@@ -4,7 +4,7 @@ import (
 	"context"
 	"os/exec"
 
-	"github.com/1whour/ktuo/model"
+	"github.com/1whour/crab/model"
 )
 
 func init() {

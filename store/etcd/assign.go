@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/1whour/ktuo/model"
-	"github.com/1whour/ktuo/utils"
+	"github.com/1whour/crab/model"
+	"github.com/1whour/crab/utils"
 	"go.etcd.io/etcd/client/v3/concurrency"
 )
 

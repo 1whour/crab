@@ -9,28 +9,28 @@ const (
 	//gate模块在etcd注册的node信息, 作用是
 	// 在内网模式，让runtime发现gate
 	// val是ip
-	GateNodePrefix = "/ktuo/v1/node/gate"
+	GateNodePrefix = "/crab/v1/node/gate"
 
 	//全局任务队列, 消费者是mjobs模块，使用一定的负载均衡策略分配任务
-	GlobalTaskPrefix = "/ktuo/v1/global/runq/task/data"
+	GlobalTaskPrefix = "/crab/v1/global/runq/task/data"
 
 	//全局任务队列， 状态canrun/running/stop
-	GlobalTaskPrefixState = "/ktuo/v1/global/runq/task/state"
+	GlobalTaskPrefixState = "/crab/v1/global/runq/task/state"
 
 	//本地任务队列, key是LocalRuntimeTaskPrefix+runtime.name
 	//如果runtime的连接的gateway进程异常退出，也不需要迁移任务
-	LocalRuntimeTaskPrefix = "/ktuo/v1/local/runq/task/runtime"
+	LocalRuntimeTaskPrefix = "/crab/v1/local/runq/task/runtime"
 
 	//注册的runtime节点信息, 路径后面是runtimeName
-	RuntimeNodePrefix = "/ktuo/v1/runtime"
+	RuntimeNodePrefix = "/crab/v1/runtime"
 
 	LambdaKey = "lambda"
 
 	//注册的runtime节点信息, 路径后面是runtimeName
-	RuntimeNodeLambdaPrefix = "/ktuo/v1/runtime/lambda"
+	RuntimeNodeLambdaPrefix = "/crab/v1/runtime/lambda"
 
 	//分配task用的分布式锁
-	AssignTaskMutexPrefix = "/ktuo/v1/task/assign/mutex"
+	AssignTaskMutexPrefix = "/crab/v1/task/assign/mutex"
 )
 
 // 加锁需调用该函数，生成唯一的锁key

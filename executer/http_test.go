@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/1whour/ktuo/model"
+	"github.com/1whour/crab/model"
 	"github.com/stretchr/testify/assert"
 
 	"gopkg.in/yaml.v3"

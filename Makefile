@@ -1,15 +1,15 @@
 all: build
 
 cluster:
-	- killall ktuo
+	- killall crab
 	- rm cluster.log
 	goreman start|tee -a cluster.log
 
 norace:
-	go build ./cmd/ktuo/ktuo.go
+	go build ./cmd/crab/crab.go
 
 build:
-	go build -race ./cmd/ktuo/ktuo.go
+	go build -race ./cmd/crab/crab.go
 
 test.shell:
 	bash ./testscript/run.sh

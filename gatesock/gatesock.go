@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/1whour/ktuo/model"
-	"github.com/1whour/ktuo/slog"
-	"github.com/1whour/ktuo/utils"
+	"github.com/1whour/crab/model"
+	"github.com/1whour/crab/slog"
+	"github.com/1whour/crab/utils"
 	"github.com/gorilla/websocket"
 )
 

@@ -3,7 +3,7 @@ package mjobs
 import (
 	"time"
 
-	"github.com/1whour/ktuo/model"
+	"github.com/1whour/crab/model"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 

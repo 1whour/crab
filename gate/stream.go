@@ -2,7 +2,7 @@ package gate
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/1whour/ktuo/model"
+	"github.com/1whour/crab/model"
 )
 
 func (r *Gate) stream(c *gin.Context) {
