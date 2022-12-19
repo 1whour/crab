@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -14,9 +15,15 @@ type Slog struct {
 	zerolog.Logger
 }
 
+var once sync.Once
+
 // 初始化函数
 func New(w ...io.Writer) *Slog {
-	zerolog.TimeFieldFormat = time.RFC3339Nano
+
+	once.Do(func() {
+
+		zerolog.TimeFieldFormat = time.RFC3339Nano
+	})
 	return &Slog{Logger: zerolog.New(io.MultiWriter(w...)).With().Timestamp().Logger()}
 }
 

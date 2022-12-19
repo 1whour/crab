@@ -1,0 +1,1 @@
+crab.monomer: ./crab monomer --dsn "root:3434@@Aa@tcp(127.0.0.1:3306)/crab?charset=utf8mb4&parseTime=True&loc=Local" -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -s 127.0.0.1:3434

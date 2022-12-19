@@ -3,7 +3,13 @@ all: build
 cluster:
 	- killall crab
 	- rm cluster.log
-	goreman start|tee -a cluster.log
+	goreman -f cluster.proc start|tee -a cluster.log
+
+monomer:
+	echo "monomer"
+	- killall crab
+	- rm monomer.log
+	goreman -f monomer.proc start|tee -a monomer.log
 
 norace:
 	go build ./cmd/crab/crab.go

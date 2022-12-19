@@ -7,6 +7,7 @@ import (
 	"github.com/1whour/crab/cmd/status"
 	"github.com/1whour/crab/gate"
 	"github.com/1whour/crab/mjobs"
+	"github.com/1whour/crab/monomer"
 	"github.com/1whour/crab/runtime"
 	"github.com/guonaihong/clop"
 )
@@ -32,7 +33,8 @@ type crab struct {
 	mocksrv.MockSrv `clop:"subcommand" usage:"mock server"`
 	// 查看任务状态
 	status.Status `clop:"subcommand" usage:"status"`
-	// server子命令
+	// 单体模式，相当于起了一个runtime, gate, mjobs
+	monomer.Monomer `clop:"subcommand" usage:"monomer"`
 }
 
 func main() {
