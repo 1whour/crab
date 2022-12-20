@@ -149,7 +149,7 @@ func (g *Gate) getUserInfo(c *gin.Context) {
 
 // 获取用户信息列表
 func (g *Gate) GetUserInfoList(c *gin.Context) {
-	p := Page{}
+	p := PageLogin{}
 	if err := c.ShouldBindQuery(&p); err != nil {
 		g.error(c, 500, err.Error())
 		return

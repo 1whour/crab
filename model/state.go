@@ -34,7 +34,7 @@ type State struct {
 	UpdateTime time.Time `json:"updateTime"`
 	// ack消息标记
 	Ack bool `json:"ack"`
-	// 从数据字段移过来
+	// 从数据字段移过来, oneRuntime 或者broadcast
 	Kind string `json:"kind"`
 	// 是否是Lambda函数，必须要绑定
 	Lambda bool `json:"lambda"`

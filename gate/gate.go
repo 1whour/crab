@@ -6,12 +6,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 	"github.com/1whour/crab/model"
 	"github.com/1whour/crab/slog"
 	"github.com/1whour/crab/store/etcd"
 	"github.com/1whour/crab/utils"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/guonaihong/gutil/jwt"
@@ -75,7 +75,7 @@ func (r *Gate) init() (err error) {
 		return err
 	}
 	// 初始化数据库
-	r.loginDb, err = newLoginDB(db)
+	r.loginDb, err = newLoginTable(db)
 	if err != nil {
 		return err
 	}

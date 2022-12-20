@@ -12,10 +12,8 @@ var (
 	columnWithPassword = []string{"id", "user_name", "password", "email", "rule"}
 )
 
-type Page struct {
-	Limit    int    `form:"limit"`
-	Page     int    `form:"page"`
-	Sort     string `form:"sort"`
+type PageLogin struct {
+	Page
 	UserName string `form:"username"`
 }
 
@@ -38,7 +36,7 @@ type LoginCore struct {
 }
 
 // 初始化
-func newLoginDB(db *gorm.DB) (*LoginDB, error) {
+func newLoginTable(db *gorm.DB) (*LoginDB, error) {
 	return &LoginDB{DB: db}, nil
 }
 
@@ -79,7 +77,7 @@ func (l *LoginDB) delete(login *LoginCore) error {
 }
 
 // 查看用户信息
-func (l *LoginDB) queryAndPage(p Page, needPassword bool) (rv []LoginCore, count int64, err error) {
+func (l *LoginDB) queryAndPage(p PageLogin, needPassword bool) (rv []LoginCore, count int64, err error) {
 	c := column
 	if needPassword {
 		c = columnWithPassword
@@ -96,7 +94,12 @@ func (l *LoginDB) queryAndPage(p Page, needPassword bool) (rv []LoginCore, count
 		where["user_name"] = p.UserName
 	}
 
-	err = l.DB.Debug().Model(&LoginCore{}).Select(c).Where(where).Order(order).Offset(p.Page - 1).Limit(p.Limit).Find(&rv).Error
+	err = l.DB.Debug().Model(&LoginCore{}).
+		Select(c).
+		Where(where).
+		Order(order).
+		Offset(p.Page.Page - 1).
+		Limit(p.Limit).Find(&rv).Error
 	if err != nil {
 		return
 	}

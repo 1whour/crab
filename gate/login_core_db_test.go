@@ -22,7 +22,7 @@ func testInitTable(t *testing.T) *LoginDB {
 	})
 
 	assert.NoError(t, err)
-	login, err := newLoginDB(db)
+	login, err := newLoginTable(db)
 	assert.NoError(t, err)
 
 	login.resetTable()
@@ -116,7 +116,7 @@ func Test_Login_GetList(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	all, _, err := login.queryAndPage(Page{Limit: 10, Page: 1}, false)
+	all, _, err := login.queryAndPage(PageLogin{Page: Page{Limit: 10, Page: 1}}, false)
 	assert.NotEqual(t, len(all), 0)
 	for i, v := range insertAll[:10] {
 		assert.Equal(t, v.UserName, all[i].UserName)
