@@ -9,6 +9,10 @@ const (
 	TASK_STOP_URL   = "/crab/task/stop"
 	TASK_STATUS_URL = "/crab/status/"
 
+	// 执行任务时的保存结果
+	TASK_EXECUTER_RESULT_URL = "/crab/ui/task/result"
+	// 获取任务的列表
+	TASK_EXECUTER_RESULT_LIST_URL = "/crab/ui/task/result/list"
 	// user 管理相关接口
 	// 注册新用户, POST
 	UI_USER_REGISTER_URL = "/crab/ui/user"

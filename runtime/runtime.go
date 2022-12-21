@@ -7,16 +7,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/antlabs/cronex"
-	"github.com/antlabs/gstl/cmp"
-	"github.com/antlabs/gstl/rwmap"
 	"github.com/1whour/crab/executer"
 	"github.com/1whour/crab/gatesock"
 	"github.com/1whour/crab/model"
 	"github.com/1whour/crab/slog"
 	"github.com/1whour/crab/utils"
+	"github.com/antlabs/cronex"
+	"github.com/antlabs/gstl/cmp"
+	"github.com/antlabs/gstl/ifop"
+	"github.com/antlabs/gstl/rwmap"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/guonaihong/gout"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -44,7 +46,8 @@ type Runtime struct {
 	MuConn sync.Mutex //保护多个go程写同一个conn
 
 	cronFunc rwmap.RWMap[string, cronNode]
-	addrs    rwmap.RWMap[string, string]
+	// 所以的gate地址都保存到这里
+	addrs rwmap.RWMap[string, string]
 }
 
 type cronNode struct {
@@ -68,7 +71,7 @@ func (r *Runtime) Init() (err error) {
 	r.cron = cronex.New()
 	r.ctx = context.TODO()
 
-	// runtime被内嵌到lambda里面，可能Slog已经被初始化过
+	// runtime被内嵌到lambda模块里面，可能Slog已经被初始化过, 所以不需要重复初始化
 	if r.Slog == nil {
 		r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("runtime", r.NodeName)
 	}
@@ -176,14 +179,26 @@ func (r *Runtime) createCron(param *model.Param) (b []byte, err error) {
 	ctx, cancel := context.WithCancel(r.ctx)
 	tm, err := r.cron.AddFunc(param.Trigger.Cron, func() {
 		// 创建执行器
+		addr := r.getAddr()
+		start := time.Now()
 		payload, err := r.createToExec(ctx, param)
 		if err != nil {
 			r.Error().Msgf("createToExec %s, taskName:%s\n", err, param.Executer.TaskName)
-			return
+		} else {
+			r.Debug().Msgf("result:%s", payload)
 		}
-		// TODO: 错误要上报到gate模块
-		// TODO: payload
-		r.Debug().Msgf("result:%s", payload)
+
+		err = gout.POST(addr + model.TASK_EXECUTER_RESULT_LIST_URL).SetJSON(model.ResultCore{
+			TaskID:     param.Executer.TaskName,
+			TaskName:   param.Executer.TaskName,
+			StartTime:  start,
+			EndTime:    time.Now(),
+			TaskStatus: ifop.IfElse(err == nil, "success", "failed"),
+			Result:     string(payload),
+		}).Do()
+		if err != nil {
+			r.Warn().Msgf("result:%s", err)
+		}
 	})
 
 	if err != nil {
@@ -232,6 +247,16 @@ func (i *interval) sleep() {
 	time.Sleep(time.Duration(*i))
 	*i *= 2
 	*i = interval(cmp.Min(time.Duration(*i), maxIntervalTime))
+}
+
+// 获取gate的地址
+func (r *Runtime) getAddr() string {
+	addrs := r.addrs.Keys()
+	if len(addrs) == 0 {
+		return ""
+	}
+
+	return utils.SliceRandOne(addrs)
 }
 
 // 初始化时创建 只创建一个长连接

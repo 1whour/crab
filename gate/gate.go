@@ -49,8 +49,10 @@ type Gate struct {
 	*slog.Slog
 	// ctx
 	ctx context.Context
-	// 数据库对象
-	loginDb *LoginDB
+	// login表
+	loginTable *LoginTable
+	// result表
+	resultTable *ResultTable
 }
 
 func (g *Gate) NodeName() string {
@@ -75,10 +77,12 @@ func (r *Gate) init() (err error) {
 		return err
 	}
 	// 初始化数据库
-	r.loginDb, err = newLoginTable(db)
+	r.loginTable, err = newLoginTable(db)
 	if err != nil {
 		return err
 	}
+
+	r.resultTable = newResultTable(db)
 
 	r.ctx = context.TODO()
 	if r.Name == "" {
@@ -244,6 +248,12 @@ func (r *Gate) SubMain() {
 	}
 
 	g.Use(cors.New(config))
+	// result相关接口
+	// TODO token验证下
+	g.POST(model.TASK_EXECUTER_RESULT_URL, r.saveResult)
+	g.GET(model.TASK_EXECUTER_RESULT_LIST_URL, r.getResultList)
+	g.DELETE(model.TASK_EXECUTER_RESULT_URL, r.deleteResult)
+
 	g.GET(model.TASK_STREAM_URL, r.stream) //流式接口，主动推送任务至runtime
 	g.POST(model.TASK_CREATE_URL, r.createTask)
 	g.PUT(model.TASK_UPDATE_URL, r.updateTask)

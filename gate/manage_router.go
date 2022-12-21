@@ -45,7 +45,7 @@ func (g *Gate) register(c *gin.Context) {
 	}
 
 	g.Debug().Msgf("register info :%v", lc)
-	if err := g.loginDb.insert(&lc); err != nil {
+	if err := g.loginTable.insert(&lc); err != nil {
 		g.error2(c, 500, err.Error())
 		return
 	}
@@ -61,7 +61,7 @@ func (g *Gate) login(c *gin.Context) {
 		return
 	}
 
-	rv, err := g.loginDb.queryNeedPassword(lc)
+	rv, err := g.loginTable.queryNeedPassword(lc)
 	if err != nil {
 		g.error(c, 500, err.Error())
 		return
@@ -101,7 +101,7 @@ func (g *Gate) updateUser(c *gin.Context) {
 	}
 
 	lc.Password = md5sum(lc.Password)
-	g.loginDb.update(&lc)
+	g.loginTable.update(&lc)
 	c.JSON(200, wrapData{})
 }
 
@@ -120,7 +120,7 @@ func (g *Gate) deleteUser(c *gin.Context) {
 
 	lc2 := LoginCore{}
 	deepcopy.Copy(&lc2, &lc).Do()
-	g.loginDb.delete(&lc2)
+	g.loginTable.delete(&lc2)
 	c.JSON(200, wrapData{})
 }
 
@@ -135,7 +135,7 @@ func (g *Gate) getUserInfo(c *gin.Context) {
 
 	g.Debug().Msgf("token:%#v", val)
 	lc := LoginCore{UserName: val.Issuer}
-	rv, err := g.loginDb.query(lc)
+	rv, err := g.loginTable.query(lc)
 	if err != nil {
 		g.error(c, 500, err.Error())
 		return
@@ -160,7 +160,7 @@ func (g *Gate) GetUserInfoList(c *gin.Context) {
 		p.Limit = 10
 	}
 
-	rv, count, err := g.loginDb.queryAndPage(p, true)
+	rv, count, err := g.loginTable.queryAndPage(p, true)
 	if err != nil {
 		g.error(c, 500, err.Error())
 		return

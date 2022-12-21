@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func testInitTable(t *testing.T) *LoginDB {
+func testInitLoginTable(t *testing.T) *LoginTable {
 	passwd := os.Getenv("CRAB_MYSQL_PASSWD")
 	dsn := fmt.Sprintf("root:%s@tcp(127.0.0.1:3306)/crab?charset=utf8mb4&parseTime=True&loc=Local", passwd)
 
@@ -34,7 +34,7 @@ func testInitTable(t *testing.T) *LoginDB {
 func Test_Login_Create(t *testing.T) {
 
 	var err error
-	login := testInitTable(t)
+	login := testInitLoginTable(t)
 
 	err = login.insert(&LoginCore{UserName: "guo", Password: "123", Email: "1@qq.com"})
 	assert.NoError(t, err)
@@ -49,7 +49,7 @@ func Test_Login_Create(t *testing.T) {
 // 测试删除，先插入，删除，查询没有为正确
 func Test_Login_Delete(t *testing.T) {
 	var err error
-	login := testInitTable(t)
+	login := testInitLoginTable(t)
 
 	err = login.insert(&LoginCore{UserName: "guo", Password: "123", Email: "1@qq.com"})
 	assert.NoError(t, err)
@@ -66,7 +66,7 @@ func Test_Login_Delete(t *testing.T) {
 // 测试更新, 先插入，更新，查询数据是否符合预期
 func Test_Login_Update(t *testing.T) {
 	var err error
-	login := testInitTable(t)
+	login := testInitLoginTable(t)
 
 	err = login.insert(&LoginCore{UserName: "guo", Password: "123", Email: "1@qq.com", Rule: "admin"})
 	assert.NoError(t, err)
@@ -85,7 +85,7 @@ func Test_Login_Update(t *testing.T) {
 func Test_Login_Get(t *testing.T) {
 
 	var err error
-	login := testInitTable(t)
+	login := testInitLoginTable(t)
 
 	err = login.insert(&LoginCore{UserName: "guo", Password: "123", Email: "gnh@xx.com"})
 	assert.NoError(t, err)
@@ -104,7 +104,7 @@ func Test_Login_Get(t *testing.T) {
 func Test_Login_GetList(t *testing.T) {
 
 	var err error
-	login := testInitTable(t)
+	login := testInitLoginTable(t)
 
 	insertAll := []LoginCore{}
 	for i := 0; i < 15; i++ {

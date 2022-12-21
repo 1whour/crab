@@ -17,7 +17,7 @@ type PageLogin struct {
 	UserName string `form:"username"`
 }
 
-type LoginDB struct {
+type LoginTable struct {
 	DB *gorm.DB
 }
 
@@ -36,8 +36,8 @@ type LoginCore struct {
 }
 
 // 初始化
-func newLoginTable(db *gorm.DB) (*LoginDB, error) {
-	return &LoginDB{DB: db}, nil
+func newLoginTable(db *gorm.DB) (*LoginTable, error) {
+	return &LoginTable{DB: db}, nil
 }
 
 func md5sum(s string) string {
@@ -45,39 +45,39 @@ func md5sum(s string) string {
 }
 
 // 插入数据
-func (l *LoginDB) insert(login *LoginCore) error {
+func (l *LoginTable) insert(login *LoginCore) error {
 	// 密码换成md5串
 	login.Password = fmt.Sprintf("%x", md5.Sum([]byte(login.Password)))
 	return l.DB.Create(login).Error
 }
 
 // 查询数据
-func (l *LoginDB) queryNeedPassword(login LoginCore) (ld LoginCore, err error) {
+func (l *LoginTable) queryNeedPassword(login LoginCore) (ld LoginCore, err error) {
 	err = l.DB.Model(&LoginCore{}).Select(column, "password").Where("user_name = ? AND password = ?", login.UserName, md5sum(login.Password)).First(&ld).Error
 	return
 }
 
 // 查询数据
-func (l *LoginDB) query(login LoginCore) (ld LoginCore, err error) {
+func (l *LoginTable) query(login LoginCore) (ld LoginCore, err error) {
 	err = l.DB.Model(&LoginCore{}).Select(column).Where("user_name = ?", login.UserName).First(&ld).Error
 	ld.Password = ""
 	return
 }
 
 // 更新
-func (l *LoginDB) update(login *LoginCore) (err error) {
+func (l *LoginTable) update(login *LoginCore) (err error) {
 	err = l.DB.Model(&LoginCore{}).Where("id = ?", login.ID).Updates(login).Error
 	return
 }
 
 // 删除用户, 真删除
-func (l *LoginDB) delete(login *LoginCore) error {
+func (l *LoginTable) delete(login *LoginCore) error {
 	l.DB.Unscoped().Delete(login)
 	return nil
 }
 
 // 查看用户信息
-func (l *LoginDB) queryAndPage(p PageLogin, needPassword bool) (rv []LoginCore, count int64, err error) {
+func (l *LoginTable) queryAndPage(p PageLogin, needPassword bool) (rv []LoginCore, count int64, err error) {
 	c := column
 	if needPassword {
 		c = columnWithPassword
@@ -109,17 +109,17 @@ func (l *LoginDB) queryAndPage(p PageLogin, needPassword bool) (rv []LoginCore, 
 }
 
 // 单元测试用
-func (l *LoginDB) resetTable() {
+func (l *LoginTable) resetTable() {
 	l.deleteTable()
 	l.createTable()
 }
 
 // 创建表, 单元测试用
-func (l *LoginDB) createTable() {
+func (l *LoginTable) createTable() {
 	l.DB.AutoMigrate(&LoginCore{})
 }
 
 // 清空表, 单元测试用
-func (l *LoginDB) deleteTable() error {
+func (l *LoginTable) deleteTable() error {
 	return l.DB.Migrator().DropTable(&LoginCore{})
 }

@@ -1,29 +1,13 @@
 package gate
 
 import (
-	"time"
-
+	"github.com/1whour/crab/model"
 	"gorm.io/gorm"
 )
 
-type ResultCore struct {
-	gorm.Model
-	// 任务id
-	ID string `gorm:"index:,unique;not null;type:varchar(40)" json:"id"`
-	// 任务名
-	TaskName string `gorm:"type:varchar(40)" json:"taskName"`
-	// 任务类型
-	TaskType string `gorm:"type":enum('cron');default:"cron"`
-
-	// 任务开始时间
-	StartTime time.Time
-	// 任务结束时间
-	EndTime time.Time
-	// 执行状态,
-	Status string `gorm:"type:enum('success', 'failed');default:'success'"`
-	// 执行结果
-	Result string
-}
+var (
+	resultColumm = []string{"id", "task_id", "task_name", "task_type", "task_status", "result", "start_time", "end_time"}
+)
 
 type PageResult struct {
 	Page
@@ -40,13 +24,13 @@ func newResultTable(db *gorm.DB) *ResultTable {
 }
 
 // 插入
-func (r *ResultTable) insert(result *ResultTable) error {
-	return r.DB.Create(result).Error
+func (r *ResultTable) insert(result model.ResultCore) error {
+	return r.DB.Create(&result).Error
 }
 
 // 查询
-func (l *ResultTable) queryAndPage(p PageResult) (rv []ResultTable, count int64, err error) {
-	c := column
+func (l *ResultTable) queryAndPage(p PageResult) (rv []model.ResultCore, count int64, err error) {
+	c := resultColumm
 	order := ""
 	if len(p.Sort) > 0 {
 		if p.Sort[0] == '-' {
@@ -56,10 +40,10 @@ func (l *ResultTable) queryAndPage(p PageResult) (rv []ResultTable, count int64,
 
 	where := map[string]any{}
 	if len(p.ID) > 0 {
-		where["id"] = p.ID
+		where["task_id"] = p.ID
 	}
 
-	err = l.DB.Debug().Model(&ResultTable{}).Select(c).
+	err = l.DB.Debug().Model(&model.ResultCore{}).Select(c).
 		Where(where).
 		Order(order).
 		Offset(p.Page.Page - 1).
@@ -69,12 +53,12 @@ func (l *ResultTable) queryAndPage(p PageResult) (rv []ResultTable, count int64,
 		return
 	}
 
-	l.DB.Debug().Model(&ResultTable{}).Count(&count)
+	l.DB.Debug().Model(&model.ResultCore{}).Count(&count)
 	return
 }
 
 // 删除
-func (r *ResultTable) delete(result *ResultCore) (err error) {
+func (r *ResultTable) delete(result *model.ResultCore) (err error) {
 	r.DB.Unscoped().Delete(result)
 	return
 }
@@ -87,10 +71,10 @@ func (l *ResultTable) resetTable() {
 
 // 创建表, 单元测试用
 func (l *ResultTable) createTable() {
-	l.DB.AutoMigrate(&ResultTable{})
+	l.DB.AutoMigrate(&model.ResultCore{})
 }
 
 // 清空表, 单元测试用
 func (l *ResultTable) deleteTable() error {
-	return l.DB.Migrator().DropTable(&ResultTable{})
+	return l.DB.Migrator().DropTable(&model.ResultCore{})
 }
