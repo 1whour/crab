@@ -11,7 +11,8 @@ var (
 
 type PageResult struct {
 	Page
-	TaskID string `form:"task_id"`
+	TaskID     string `form:"task_id" json:"task_id"`
+	NeedUpdate bool   `form:"need_update"`
 }
 
 type ResultTable struct {
@@ -65,8 +66,21 @@ func (l *ResultTable) queryAndPage(p PageResult) (rv []model.ResultCore, count i
 }
 
 // 删除
-func (r *ResultTable) delete(result *model.ResultCore) (err error) {
-	r.DB.Unscoped().Delete(result)
+func (r *ResultTable) delete(p PageResult) (err error) {
+	db := r.DB.Unscoped()
+	if len(p.TaskID) > 0 {
+		db.Where("task_id", p.TaskID)
+	}
+
+	if !p.StartTime.IsZero() {
+		db.Where("start_time >= ?", p.StartTime)
+	}
+
+	if !p.EndTime.IsZero() {
+		db.Where("end_time <= ?", p.EndTime)
+	}
+
+	db.Delete(model.ResultCore{})
 	return
 }
 

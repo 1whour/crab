@@ -4,16 +4,15 @@ import (
 	"time"
 
 	"github.com/1whour/crab/model"
-	"github.com/antlabs/deepcopy"
 	"github.com/gin-gonic/gin"
 )
 
 type Page struct {
-	Limit     int       `form:"limit"`
-	Page      int       `form:"page"`
-	Sort      string    `form:"sort"`
-	StartTime time.Time `form:"start_time"`
-	EndTime   time.Time `form:"end_time"`
+	Limit     int       `form:"limit" json:"limit"`
+	Page      int       `form:"page" json:"page"`
+	Sort      string    `form:"sort" json:"sort"`
+	StartTime time.Time `form:"start_time" json:"start_time"`
+	EndTime   time.Time `form:"end_time" json:"end_time"`
 }
 
 // 保存result结果
@@ -60,16 +59,28 @@ func (g *Gate) getResultList(c *gin.Context) {
 // 删除日志
 func (g *Gate) deleteResult(c *gin.Context) {
 
-	lc := model.ResultCoreDelete{}
+	p := PageResult{}
 
-	err := c.ShouldBindJSON(&lc)
+	err := c.ShouldBindJSON(&p)
 	if err != nil {
 		g.error2(c, 500, err.Error())
 		return
 	}
 
-	lc2 := model.ResultCore{}
-	deepcopy.Copy(&lc2, &lc).Do()
-	g.resultTable.delete(&lc2)
-	c.JSON(200, wrapData{})
+	g.resultTable.delete(p)
+	if !p.NeedUpdate {
+		c.JSON(200, wrapData{})
+		return
+	}
+
+	rv, count, err := g.resultTable.queryAndPage(p)
+	if err != nil {
+		g.error(c, 500, err.Error())
+		return
+	}
+
+	c.JSON(200, wrapData{Data: userList{
+		Total: count,
+		Items: rv,
+	}})
 }
