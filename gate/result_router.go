@@ -1,15 +1,19 @@
 package gate
 
 import (
+	"time"
+
 	"github.com/1whour/crab/model"
 	"github.com/antlabs/deepcopy"
 	"github.com/gin-gonic/gin"
 )
 
 type Page struct {
-	Limit int    `form:"limit"`
-	Page  int    `form:"page"`
-	Sort  string `form:"sort"`
+	Limit     int       `form:"limit"`
+	Page      int       `form:"page"`
+	Sort      string    `form:"sort"`
+	StartTime time.Time `form:"start_time"`
+	EndTime   time.Time `form:"end_time"`
 }
 
 // 保存result结果

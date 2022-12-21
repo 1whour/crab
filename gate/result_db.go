@@ -37,14 +37,21 @@ func (l *ResultTable) queryAndPage(p PageResult) (rv []model.ResultCore, count i
 			order = p.Sort[1:] + " desc"
 		}
 	}
+	db := l.DB.Debug().Model(&model.ResultCore{}).Select(c)
 
-	where := map[string]any{}
 	if len(p.TaskID) > 0 {
-		where["task_id"] = p.TaskID
+		db.Where("task_id", p.TaskID)
 	}
 
-	err = l.DB.Debug().Model(&model.ResultCore{}).Select(c).
-		Where(where).
+	if !p.StartTime.IsZero() {
+		db.Where("start_time >= ?", p.StartTime)
+	}
+
+	if !p.EndTime.IsZero() {
+		db.Where("end_time <= ?", p.EndTime)
+	}
+
+	err = db.
 		Order(order).
 		Offset(p.Page.Page - 1).
 		Limit(p.Limit).
