@@ -11,7 +11,7 @@ var (
 
 type PageResult struct {
 	Page
-	ID string
+	TaskID string `form:"task_id"`
 }
 
 type ResultTable struct {
@@ -39,8 +39,8 @@ func (l *ResultTable) queryAndPage(p PageResult) (rv []model.ResultCore, count i
 	}
 
 	where := map[string]any{}
-	if len(p.ID) > 0 {
-		where["task_id"] = p.ID
+	if len(p.TaskID) > 0 {
+		where["task_id"] = p.TaskID
 	}
 
 	err = l.DB.Debug().Model(&model.ResultCore{}).Select(c).

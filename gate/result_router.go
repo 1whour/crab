@@ -64,8 +64,6 @@ func (g *Gate) deleteResult(c *gin.Context) {
 		return
 	}
 
-	//lc := LoginCore{Model: gorm.Model{ID: uint(lc.ID)}}
-
 	lc2 := model.ResultCore{}
 	deepcopy.Copy(&lc2, &lc).Do()
 	g.resultTable.delete(&lc2)
