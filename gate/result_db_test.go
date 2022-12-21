@@ -53,7 +53,7 @@ func Test_ResultTable_Insert(t *testing.T) {
 	err = result.insert(insertData)
 	assert.NoError(t, err)
 
-	rv, _, err := result.queryAndPage(PageResult{ID: id, Page: Page{Limit: 2}})
+	rv, _, err := result.queryAndPage(PageResult{TaskID: id, Page: Page{Limit: 2}})
 	assert.Equal(t, rv[0].TaskID, id)
 	assert.Equal(t, rv[1].TaskID, id)
 	assert.NoError(t, err)

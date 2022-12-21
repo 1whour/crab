@@ -1,5 +1,5 @@
-## ktuo
-ktuo是分布式调度框架，主要功能定时，延时，lambda等功能。可以基于DAG组织任务。
+## crab
+crab是分布式调度框架，主要功能定时，延时，lambda等功能。可以基于DAG组织任务。
 
 ## 进展
 开发中。。。
@@ -45,19 +45,19 @@ executer:
 ```
 ### 1. 创建任务
 ```bash
- ./ktuo start -f ./example/http.yaml -g gate_addr
+ ./crab start -f ./example/http.yaml -g gate_addr
 ```
 ### 2. 删除任务
 ```bash
-./ktuo rm -f ./example/http.yaml -g gate_addr
+./crab rm -f ./example/http.yaml -g gate_addr
 ```
 ### 3. 停止任务
 ```bash
-./ktuo stop -f ./example/http.yaml -g gate_addr
+./crab stop -f ./example/http.yaml -g gate_addr
 ```
 ### 4. 更新任务
 ```bash
-./ktuo update -f ./example/http.yaml -g gate_addr
+./crab update -f ./example/http.yaml -g gate_addr
 ```
 
 ### 二、shell任务配置
@@ -76,11 +76,11 @@ executer:
 
 ### 三、其它命令
 ```bash
-ktuo start 配置文件. #创建新的dag任务，并且运行
-ktuo stop 配置文件. #停止dag任务
-ktuo rm 配置文件. #删除dag任务
-ktuo run 配置文件. #运行已存在的任务，如果不存在会返回错误
-ktuo status 获取任务的状态
+crab start 配置文件. #创建新的dag任务，并且运行
+crab stop 配置文件. #停止dag任务
+crab rm 配置文件. #删除dag任务
+crab run 配置文件. #运行已存在的任务，如果不存在会返回错误
+crab status 获取任务的状态
 ```
 
 
@@ -117,7 +117,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/gnh123/ktuo/lambda"
+	"github.com/gnh123/crab/lambda"
 )
 
 func hello() (string, error) {
@@ -150,7 +150,36 @@ func main() {
 }
 ```
 
-#### 4.3 保存至ktuo
+#### 4.3 保存至crab
 ```yaml
-./ktuo start -f example/lambda.yaml -g 127.0.0.1:3535 -t 123456789
+./crab start -f example/lambda.yaml -g 127.0.0.1:3535 -t 123456789
 ```
+
+## 五、部署
+### 5.1 单可执行文件，多实例部署
+单可执行文件的优点是构架简单，都在云端部署
+* --dsn 连接mysql的字符串
+* -e etcd集群地址
+```bash
+# 实例1
+./crab monomer --dsn "用户名:密码@@Aa@tcp(127.0.0.1:3306)/crab?charset=utf8mb4&parseTime=True&loc=Local" -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -s 127.0.0.1:3434
+# 实例2
+./crab monomer --dsn "用户名:密码@@Aa@tcp(127.0.0.1:3306)/crab?charset=utf8mb4&parseTime=True&loc=Local" -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -s 127.0.0.1:3535
+```
+
+### 5.2 多可执行文件，多实例部署
+多可执行文件相比单可执行文件优点是灵活，runtime可以在本地，gate可以在云端
+```bash
+# gate实例1
+./crab gate -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -l debug -s "127.0.0.1:3434" --dsn "用户名:密码@@Aa@tcp(127.0.0.1:3306)/crab?charset=utf8mb4&parseTime=True&loc=Local"
+# gate实例2
+./crab gate -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -l debug -s "127.0.0.1:3535" --dsn "用户名:密码@@Aa@tcp(127.0.0.1:3306)/crab?charset=utf8mb4&parseTime=True&loc=Local"
+# runtime实例1
+crab.runtime1: ./crab runtime -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 --level debug
+# runtime实例2
+crab.runtime2: ./crab runtime -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 --level debug
+# mjobs实例1
+crab.mjobs1:   ./crab mjobs -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -l debug
+# mjobs实例2
+crab.mjobs2:   ./crab mjobs -e 127.0.0.1:32379 127.0.0.1:22379 127.0.0.1:2379 -l debug
+
