@@ -20,6 +20,7 @@ type pageRuntime struct {
 	Limit    int64  `form:"limit" json:"limit"`
 	Page     int    `form:"page" json:"page"`
 	Sort     string `form:"sort" json:"sort"`
+	ID       string `form:"id" json:"id"`
 	StartKey string `form:"start_key" json:"start_key"`
 }
 
@@ -67,16 +68,30 @@ func (g *Gate) runtimeList(ctx *gin.Context) {
 		g.error2(ctx, 500, err2.Error())
 		return
 	}
+	n := len(resp.Kvs)
+	if len(p.ID) > 0 {
+		n = 1
+	}
+	list := make([]model.RegisterRuntime, 0, n)
 
-	list := make([]model.RegisterRuntime, len(resp.Kvs))
-	for i, v := range resp.Kvs {
+	for _, v := range resp.Kvs {
 		var info model.RegisterRuntime
 		err = json.Unmarshal(v.Value, &info)
 		if err != nil {
 			g.error2(ctx, 500, err.Error())
 			return
 		}
-		list[i] = info
+
+		g.Debug().Msgf("info.id %s, p.id %s", info.Id, p.ID)
+		if len(p.ID) > 0 {
+			if info.Id == p.ID {
+				list = append(list, info)
+				break
+			}
+			continue
+		}
+
+		list = append(list, info)
 	}
 
 	if len(list) > 0 {
