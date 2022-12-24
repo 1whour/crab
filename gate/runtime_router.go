@@ -57,7 +57,7 @@ func (g *Gate) runtimeList(ctx *gin.Context) {
 		return
 	}
 
-	resp2, err2 := defaultKVC.Get(g.ctx, model.RuntimeNodePrefix, clientv3.WithCountOnly())
+	resp2, err2 := defaultKVC.Get(g.ctx, model.RuntimeNodePrefix, clientv3.WithCountOnly(), clientv3.WithPrefix())
 	if err2 != nil {
 		g.error2(ctx, 500, err2.Error())
 		return
@@ -81,7 +81,7 @@ func (g *Gate) runtimeList(ctx *gin.Context) {
 	}
 
 	ctx.JSON(200, wrapData{Data: runtimeNodeList{
-		Total:    int64(len(resp2.Kvs)),
+		Total:    resp2.Count,
 		Items:    list,
 		StartKey: startKey,
 	}})
