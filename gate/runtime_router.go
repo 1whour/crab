@@ -3,6 +3,7 @@ package gate
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 
 	"github.com/1whour/crab/model"
 	"github.com/gin-gonic/gin"
@@ -46,11 +47,15 @@ func (g *Gate) runtimeList(ctx *gin.Context) {
 		startKey = p.StartKey
 	}
 
+	sortOrder := clientv3.SortAscend
+	if strings.HasPrefix(p.Sort, "-") {
+		sortOrder = clientv3.SortDescend
+	}
 	// 获取runtimeNode的值
 	resp, err := defaultKVC.Get(g.ctx,
 		startKey,
 		clientv3.WithRange(endKey),
-		clientv3.WithSort(clientv3.SortByKey, clientv3.SortAscend),
+		clientv3.WithSort(clientv3.SortByKey, sortOrder),
 		clientv3.WithLimit(p.Limit))
 	if err != nil {
 		g.error2(ctx, 500, err.Error())
