@@ -279,6 +279,7 @@ func (r *Gate) SubMain() {
 		}
 	})
 
+	g.GET(model.UI_RUNTIME_LIST, r.runtimeList)
 	// 注册
 	g.POST(model.UI_USER_REGISTER_URL, r.register)
 	// 登录
