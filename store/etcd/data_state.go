@@ -38,6 +38,10 @@ func NewStore(EtcdAddr []string, slog *slog.Slog, runtimeNode *model.RuntimeNode
 	}, nil
 }
 
+func (e *EtcdStore) RuntimeNodeCount() int {
+	return e.RuntimeNode.Count()
+}
+
 // 创建全局状态与数据队列, 调用create web接口时用到
 func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, req *model.Param) error {
 

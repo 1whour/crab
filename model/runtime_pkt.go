@@ -31,6 +31,14 @@ type RuntimeNode struct {
 	LambdaNode  rwmap.RWMap[string, string]
 }
 
+func (r *RuntimeNode) Count() int {
+	if r == nil {
+		panic("RuntimeNode is nil")
+	}
+
+	return r.RuntimeNode.Len() + r.LambdaNode.Len()
+}
+
 // 保存path信息
 func (r *RuntimeNode) Store(key, value string) {
 	if strings.Contains(key, LambdaKey) {

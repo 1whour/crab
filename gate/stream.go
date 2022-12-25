@@ -1,8 +1,10 @@
 package gate
 
 import (
-	"github.com/gin-gonic/gin"
+	"sync/atomic"
+
 	"github.com/1whour/crab/model"
+	"github.com/gin-gonic/gin"
 )
 
 func (r *Gate) stream(c *gin.Context) {
@@ -16,6 +18,9 @@ func (r *Gate) stream(c *gin.Context) {
 		return
 	}
 	defer con.Close()
+
+	atomic.AddInt32(&r.runtimeCount, 1)
+	defer atomic.AddInt32(&r.runtimeCount, -1)
 
 	keepalive := make(chan bool)
 	runtimeNode := ""

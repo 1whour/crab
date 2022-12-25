@@ -53,6 +53,9 @@ type Gate struct {
 	loginTable *LoginTable
 	// result表
 	resultTable *ResultTable
+
+	// 统计runtime个数
+	runtimeCount int32
 }
 
 func (g *Gate) NodeName() string {
@@ -261,6 +264,7 @@ func (r *Gate) SubMain() {
 	g.POST(model.TASK_STOP_URL, r.stopTask)
 	g.GET(model.TASK_STATUS_URL, r.status)
 
+	g.GET(model.UI_GATE_COUNT, r.gateCount)
 	g.Use(func(ctx *gin.Context) {
 
 		// 登录不检查token
@@ -278,6 +282,8 @@ func (r *Gate) SubMain() {
 			return
 		}
 	})
+
+	g.GET(model.UI_GATE_LIST, r.gateList)
 
 	g.GET(model.UI_RUNTIME_LIST, r.runtimeList)
 	// 注册

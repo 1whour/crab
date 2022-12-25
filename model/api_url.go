@@ -18,6 +18,10 @@ const (
 	UI_USER_REGISTER_URL = "/crab/ui/user"
 	// 获取runtime 结果列表
 	UI_RUNTIME_LIST = "/crab/ui/runtime-node/list"
+	// 获取gate 结果列表
+	UI_GATE_LIST = "/crab/ui/gate/list"
+	// 获取gate 连接的runtime个数
+	UI_GATE_COUNT = "/crab/ui/gate/count"
 	// 用户登录, POST
 	UI_USER_LOGIN = "/crab/ui/user/login"
 	// 退出
