@@ -32,6 +32,7 @@ type gateList struct {
 	StartKey string `json:"start_key"`
 }
 
+// gate item
 type gateItem struct {
 	ID    string `json:"id"`
 	IP    string `json:"ip"`

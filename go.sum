@@ -11,8 +11,8 @@ github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHG
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/antlabs/cronex v0.0.3 h1:2njQtohLeLD8WD0fgvEXKiQc4U1ExbuZR/4BfNtajmg=
 github.com/antlabs/cronex v0.0.3/go.mod h1:/M0GL9tEOVJCGOD4qZ0VCWgVKZrguVVc8vE3VaQBtXU=
-github.com/antlabs/deepcopy v0.0.5 h1:XVDUQkuHx9kS+G7s/yNEkBGPt5s9jMjzxOGCn4ia3Ew=
-github.com/antlabs/deepcopy v0.0.5/go.mod h1:NKjyST7/uPcO2IPUKykZxOdnxRBSt5SJzyj/SlPXz0s=
+github.com/antlabs/deepcopy v0.0.6 h1:Q9PU7lzEeySIjcBmg5RCRu62SAPzhGWnmcMROzLyKsI=
+github.com/antlabs/deepcopy v0.0.6/go.mod h1:NKjyST7/uPcO2IPUKykZxOdnxRBSt5SJzyj/SlPXz0s=
 github.com/antlabs/gstl v0.0.5 h1:LyyVTZNQ+peDClIDEC7i+Yc2REiAcRCZkaSHbsCGs1E=
 github.com/antlabs/gstl v0.0.5/go.mod h1:lPp5aVibFgN2Hn5WuNKK5TT4dmwiVQ38+Y6Ab8LZ/kw=
 github.com/antlabs/stl v0.0.1 h1:TRD3csCrjREeLhLoQ/supaoCvFhNLBTNIwuRGrDIs6Q=

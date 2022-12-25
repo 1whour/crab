@@ -64,8 +64,8 @@ func (r *Gate) watchLocalRunq(req *model.Whoami, conn *websocket.Conn) {
 			}
 
 			// TODO: Lambda 支持多实例，这里需要重新考虑下
-			if state.Id != req.Id {
-				r.Warn().Msgf("This is an old runtime:new id(%s) old id(%s)", state.Id, req.Id)
+			if state.TaskID != req.Id {
+				r.Warn().Msgf("This is an old runtime:new id(%s) old id(%s)", state.TaskID, req.Id)
 				return
 			}
 

@@ -2,12 +2,12 @@ package model
 
 const (
 	// 管理task相关接口
-	TASK_STREAM_URL = "/crab/task/stream"
-	TASK_CREATE_URL = "/crab/task/"
-	TASK_DELETE_URL = "/crab/task/"
-	TASK_UPDATE_URL = "/crab/task/"
-	TASK_STOP_URL   = "/crab/task/stop"
-	TASK_STATUS_URL = "/crab/status/"
+	TASK_STREAM_URL    = "/crab/task/stream"
+	TASK_CREATE_URL    = "/crab/task/"
+	TASK_DELETE_URL    = "/crab/task/"
+	TASK_UPDATE_URL    = "/crab/task/"
+	TASK_STOP_URL      = "/crab/task/stop"
+	TASK_UI_STATUS_URL = "/crab/ui/task/status"
 
 	// 执行任务时的保存结果
 	TASK_EXECUTER_RESULT_URL = "/crab/ui/task/result"

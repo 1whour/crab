@@ -63,5 +63,5 @@ func (m *EtcdStore) NeedFix(ctx context.Context, state model.State) bool {
 	}
 
 next:
-	return (state.IsCreate() || state.IsUpdate()) && (runtimeInfo == nil || len(runtimeInfo.Kvs) == 0 || len(info.Id) > 0 && info.Id != state.Id)
+	return (state.IsCreate() || state.IsUpdate()) && (runtimeInfo == nil || len(runtimeInfo.Kvs) == 0 || len(info.Id) > 0 && info.Id != state.TaskID)
 }

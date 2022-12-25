@@ -16,22 +16,22 @@ const (
 // 1.如果是Create和Update的任务，任务绑定的runtime是空, State是任何状态，都需要被恢复, 这是一个还需要被运行的状态
 // 2.如果是Stop和Rm的任务, 如果runtimeNode不为空。InRuntime == 0时会尝试一次
 type State struct {
-	// 任务名
-	TaskName string `json:"taskName"`
 	// 任务id
-	Id string `json:"id"`
+	TaskID string `json:"task_id"`
+	// 任务名
+	TaskName string `json:"task_name"`
 	// 每个任务从全局队列中分配到本地队列都会绑定一个runtime
-	RuntimeNode string `json:"runtimeNode"`
+	RuntimeNode string `json:"runtime_node"`
 	// 运行时状态, CanRun, Running, failed
 	State string `json:"state"`
 	// 任务本身的状态, Create, Update, Stop, Rm
 	Action string `json:"action"`
 	// true表示任务正在运行，false表示任务没有运行
-	InRuntime bool `json:"InRuntime"`
+	InRuntime bool `json:"in_runtime"`
 	//创建时间, 日志作用
-	CreateTime time.Time `json:"createTime"`
+	CreateTime time.Time `json:"create_time"`
 	//更新时间, 日志作用
-	UpdateTime time.Time `json:"updateTime"`
+	UpdateTime time.Time `json:"update_time"`
 	// ack消息标记
 	Ack bool `json:"ack"`
 	// 从数据字段移过来, oneRuntime 或者broadcast
@@ -129,7 +129,7 @@ func UpdateState(value []byte, runtimeNode string, state string, action string, 
 		s.TaskName = req.Executer.TaskName
 	}
 	if len(id) > 0 {
-		s.Id = id
+		s.TaskID = id
 	}
 	s.State = state
 	s.Action = action

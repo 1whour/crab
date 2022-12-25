@@ -239,7 +239,7 @@ func (r *Gate) SubMain() {
 		}
 	}()
 
-	gin.SetMode(gin.ReleaseMode)
+	//gin.SetMode(gin.ReleaseMode)
 	g := gin.New()
 	// 跨域
 	config := cors.Config{
@@ -262,9 +262,9 @@ func (r *Gate) SubMain() {
 	g.PUT(model.TASK_UPDATE_URL, r.updateTask)
 	g.DELETE(model.TASK_DELETE_URL, r.deleteTask)
 	g.POST(model.TASK_STOP_URL, r.stopTask)
-	g.GET(model.TASK_STATUS_URL, r.status)
 
 	g.GET(model.UI_GATE_COUNT, r.gateCount)
+
 	g.Use(func(ctx *gin.Context) {
 
 		// 登录不检查token
@@ -282,6 +282,8 @@ func (r *Gate) SubMain() {
 			return
 		}
 	})
+
+	g.GET(model.TASK_UI_STATUS_URL, r.status)
 
 	g.GET(model.UI_GATE_LIST, r.gateList)
 
