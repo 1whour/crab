@@ -2,6 +2,7 @@ package gate
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -20,14 +21,14 @@ const (
 )
 
 type stateRsp struct {
-	TaskID      string    `json:"task_id"`
-	TaskName    string    `json:"task_name"`
-	Action      string    `json:"action"`
-	RuntimeNode string    `json:"runtime_node"`
-	InRuntime   bool      `json:"in_runtime"`
-	CreateTime  time.Time `json:"create_time"`
-	UpdateTime  time.Time `json:"update_time"`
-	Ip          string    `json:"ip"`
+	TaskID     string    `json:"task_id"`
+	TaskName   string    `json:"task_name"`
+	Action     string    `json:"action"`
+	State      string    `json:"state"`
+	InRuntime  bool      `json:"in_runtime"`
+	CreateTime time.Time `json:"create_time"`
+	UpdateTime time.Time `json:"update_time"`
+	Ip         string    `json:"ip"`
 }
 
 // 响应的壳
@@ -105,7 +106,9 @@ func (g *Gate) status(ctx *gin.Context) {
 			}
 
 			if len(resp.Kvs) > 0 {
-				ip = string(resp.Kvs[0].Value)
+				rnode := model.RegisterRuntime{}
+				json.Unmarshal(resp.Kvs[0].Value, &rnode)
+				ip = rnode.Ip
 			}
 		}
 
@@ -114,6 +117,7 @@ func (g *Gate) status(ctx *gin.Context) {
 			data = append(data, one)
 		} else {
 			var status stateRsp
+			status.Ip = ip
 			g.Debug().Msgf("state rsp.createTime:%v, rsp.createtime:%v", s.CreateTime, status.CreateTime)
 			deepcopy.Copy(&status, &s).Do()
 
