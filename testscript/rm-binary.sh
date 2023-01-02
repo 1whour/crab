@@ -11,7 +11,11 @@
 
 #https://www.bilibili.com/read/cv17239503/
 #cluster.log.bak
-git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.js' --prune-empty --tag-name-filter cat -- --all
-#git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.vue' --prune-empty --tag-name-filter cat -- --all
-#git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.css' --prune-empty --tag-name-filter cat -- --all
-#git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.svg' --prune-empty --tag-name-filter cat -- --all
+#git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.js' --prune-empty --tag-name-filter cat -- --all
+git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.vue' --prune-empty --tag-name-filter cat -- --all
+git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.css' --prune-empty --tag-name-filter cat -- --all
+git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.scss' --prune-empty --tag-name-filter cat -- --all
+git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.svg' --prune-empty --tag-name-filter cat -- --all
+git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.png' --prune-empty --tag-name-filter cat -- --all
+git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.html' --prune-empty --tag-name-filter cat -- --all
+git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch *.ico' --prune-empty --tag-name-filter cat -- --all
