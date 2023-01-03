@@ -59,16 +59,20 @@ func (m *Monomer) SubMain() {
 		return
 	}
 
+	r.Slog, g.Slog, mj.Slog = m.Slog, m.Slog, m.Slog
 	var wg sync.WaitGroup
 	wg.Add(3)
 	defer wg.Wait()
 
 	go func() {
+		r.Debug().Msgf("start runtime")
 		r.SubMain()
 	}()
 	go func() {
+		g.Debug().Msgf("start gate")
 		g.SubMain()
 	}()
 
+	mj.Debug().Msgf("start mjobs")
 	mj.SubMain()
 }

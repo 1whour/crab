@@ -72,6 +72,7 @@ func (r *Runtime) Init() (err error) {
 	r.ctx = context.TODO()
 
 	// runtime被内嵌到lambda模块里面，可能Slog已经被初始化过, 所以不需要重复初始化
+	r.Debug().Msgf("runtime init start:%p", r.Slog)
 	if r.Slog == nil {
 		r.Slog = slog.New(os.Stdout).SetLevel(r.Level).Str("runtime", r.NodeName)
 	}
