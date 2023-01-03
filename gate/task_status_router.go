@@ -21,14 +21,15 @@ const (
 )
 
 type stateRsp struct {
-	TaskID     string    `json:"task_id"`
-	TaskName   string    `json:"task_name"`
-	Action     string    `json:"action"`
-	State      string    `json:"state"`
-	InRuntime  bool      `json:"in_runtime"`
-	CreateTime time.Time `json:"create_time"`
-	UpdateTime time.Time `json:"update_time"`
-	Ip         string    `json:"ip"`
+	TaskID     string          `json:"task_id"`
+	TaskName   string          `json:"task_name"`
+	Action     string          `json:"action"`
+	State      string          `json:"state"`
+	InRuntime  bool            `json:"in_runtime"`
+	CreateTime time.Time       `json:"create_time"`
+	UpdateTime time.Time       `json:"update_time"`
+	Ip         string          `json:"ip"`
+	Task       json.RawMessage `json:"task"`
 }
 
 // 响应的壳
@@ -116,8 +117,16 @@ func (g *Gate) status(ctx *gin.Context) {
 			one := []string{s.TaskID, s.TaskName, s.State, s.Action, s.RuntimeNode, fmt.Sprintf("%t", s.InRuntime), s.CreateTime.String(), s.UpdateTime.String(), ip}
 			data = append(data, one)
 		} else {
+			rsp, err := defautlClient.Get(g.ctx, model.FullGlobalTask(s.TaskName))
+			if err != nil {
+				g.Warn().Msgf("get full data fail:%s, taskName:%s", err, s.TaskName)
+				continue
+			}
+
 			var status stateRsp
 			status.Ip = ip
+			status.Task = rsp.Kvs[0].Value
+
 			g.Debug().Msgf("state rsp.createTime:%v, rsp.createtime:%v", s.CreateTime, status.CreateTime)
 			deepcopy.Copy(&status, &s).Do()
 
