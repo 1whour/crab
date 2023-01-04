@@ -13,7 +13,7 @@ type Param struct {
 	//create, stop, rm, update, gate会修改这个字段，方便传递到runtime
 	Action   string        `yaml:"action" json:"action"`
 	Executer ExecuterParam `json:"executer" yaml:"executer"`
-	ExecTime time.Time     `json:"execTime" yaml:"execTime"`
+	//ExecTime time.Time     `json:"execTime" yaml:"execTime"`
 }
 
 const (

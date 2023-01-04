@@ -189,14 +189,18 @@ func (r *Runtime) createCron(param *model.Param) (b []byte, err error) {
 			r.Debug().Msgf("result:%s", payload)
 		}
 
-		err = gout.POST(addr + model.TASK_EXECUTER_RESULT_LIST_URL).SetJSON(model.ResultCore{
+		code := 0
+		err = gout.POST(addr + model.TASK_EXECUTER_RESULT_URL).Debug(false).SetJSON(model.ResultCore{
 			TaskID:     param.Executer.TaskName,
 			TaskName:   param.Executer.TaskName,
 			StartTime:  start,
 			EndTime:    time.Now(),
 			TaskStatus: ifop.IfElse(err == nil, "success", "failed"),
 			Result:     string(payload),
-		}).Do()
+		}).Code(&code).Do()
+		if code != 200 {
+			r.Warn().Msgf("save result code != 200:%d", code)
+		}
 		if err != nil {
 			r.Warn().Msgf("result:%s", err)
 		}
@@ -230,7 +234,8 @@ func (r *Runtime) runCrudCmd(conn *websocket.Conn, param *model.Param) (payload 
 	case param.IsUpdate():
 		// 先删除
 		if payload, err = r.removeFromExec(param); err != nil {
-			return payload, err
+			// 忽略找不到的错误
+			//return payload, err
 		}
 		payload, err = r.createCron(param)
 	}
