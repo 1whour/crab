@@ -208,7 +208,9 @@ func (r *Runtime) createCron(param *model.Param) (b []byte, err error) {
 
 	if err != nil {
 		cancel()
-		tm.Stop()
+		if tm != nil {
+			tm.Stop()
+		}
 		return nil, err
 	}
 

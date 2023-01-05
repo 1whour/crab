@@ -80,7 +80,7 @@ func (r *ResultTable) delete(p PageResult) (err error) {
 		db.Where("end_time <= ?", p.EndTime)
 	}
 
-	db.Delete(model.ResultCore{})
+	db.Debug().Delete(model.ResultCore{})
 	return
 }
 
