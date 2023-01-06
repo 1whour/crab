@@ -190,13 +190,22 @@ func (r *Runtime) createCron(param *model.Param) (b []byte, err error) {
 		}
 
 		code := 0
+		payloadStr := string(payload)
+		if len(payloadStr) == 0 {
+			if err != nil {
+				payloadStr = err.Error()
+			} else {
+				payloadStr = "未知错误"
+			}
+		}
+
 		err = gout.POST(addr + model.TASK_EXECUTER_RESULT_URL).Debug(false).SetJSON(model.ResultCore{
 			TaskID:     param.Executer.TaskName,
 			TaskName:   param.Executer.TaskName,
 			StartTime:  start,
 			EndTime:    time.Now(),
 			TaskStatus: ifop.IfElse(err == nil, "success", "failed"),
-			Result:     string(payload),
+			Result:     payloadStr,
 		}).Code(&code).Do()
 		if code != 200 {
 			r.Warn().Msgf("save result code != 200:%d", code)
