@@ -21,7 +21,7 @@ const (
 )
 
 type stateRsp struct {
-	TaskID     string          `json:"task_id"`
+	RuntimeID  string          `json:"runtime_id"`
 	TaskName   string          `json:"task_name"`
 	Action     string          `json:"action"`
 	State      string          `json:"state"`
@@ -114,7 +114,7 @@ func (g *Gate) status(ctx *gin.Context) {
 		}
 
 		if p.Format == "table" {
-			one := []string{s.TaskID, s.TaskName, s.State, s.Action, s.RuntimeNode, fmt.Sprintf("%t", s.InRuntime), s.CreateTime.String(), s.UpdateTime.String(), ip}
+			one := []string{s.RuntimeID, s.TaskName, s.State, s.Action, s.RuntimeNode, fmt.Sprintf("%t", s.InRuntime), s.CreateTime.String(), s.UpdateTime.String(), ip}
 			data = append(data, one)
 		} else {
 			rsp, err := defautlClient.Get(g.ctx, model.FullGlobalTask(s.TaskName))

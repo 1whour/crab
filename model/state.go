@@ -17,8 +17,8 @@ const (
 // 2.如果是Stop和Rm的任务, 如果runtimeNode不为空。InRuntime == 0时会尝试一次
 type State struct {
 	// 任务id
-	TaskID string `json:"task_id"`
-	// 任务名
+	RuntimeID string `json:"task_id"`
+	// 任务名, 目前的版本是用TaskName去重的
 	TaskName string `json:"task_name"`
 	// 每个任务从全局队列中分配到本地队列都会绑定一个runtime
 	RuntimeNode string `json:"runtime_node"`
@@ -129,7 +129,7 @@ func UpdateState(value []byte, runtimeNode string, state string, action string, 
 		s.TaskName = req.Executer.TaskName
 	}
 	if len(id) > 0 {
-		s.TaskID = id
+		s.RuntimeID = id
 	}
 	s.State = state
 	s.Action = action
