@@ -53,7 +53,8 @@ type Gate struct {
 	loginTable *LoginTable
 	// result表
 	resultTable *ResultTable
-
+	// status 表
+	statusTable *StatusTable
 	// 统计runtime个数
 	runtimeCount int32
 }
@@ -80,12 +81,11 @@ func (r *Gate) init() (err error) {
 		return err
 	}
 	// 初始化数据库
-	r.loginTable, err = newLoginTable(db)
-	if err != nil {
-		return err
-	}
+	r.loginTable = newLoginTable(db)
 
 	r.resultTable = newResultTable(db)
+
+	r.statusTable = newStatusTable(db)
 
 	r.ctx = context.TODO()
 	if r.Name == "" {

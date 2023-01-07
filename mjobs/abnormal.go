@@ -46,6 +46,41 @@ func (m *Mjobs) failover(fullRuntime string) error {
 	return nil
 }
 
+// 清理本地数据队列
+func (m *Mjobs) cleanupLocalTask() {
+
+	/*
+		startKey := model.LocalRuntimeTaskPrefix
+		startKey = p.StartKey
+
+		sortOrder := clientv3.SortAscend
+		if strings.HasPrefix(p.Sort, "-") {
+			sortOrder = clientv3.SortDescend
+		}
+
+		resp, err := defaultKVC.Get(g.ctx,
+			startKey,
+			clientv3.WithRange(endGlobalTaskKey),
+			clientv3.WithSort(clientv3.SortByKey, sortOrder),
+			clientv3.WithLimit(p.Limit))
+		if err != nil {
+			g.error2(ctx, 500, err.Error())
+			return
+		}
+
+		resp2, err2 := defaultKVC.Get(g.ctx, model.GlobalTaskPrefixState, clientv3.WithCountOnly(), clientv3.WithPrefix())
+		if err2 != nil {
+			g.error2(ctx, 500, err2.Error())
+			return
+		}
+
+		n := len(resp.Kvs)
+		if len(p.ID) > 0 {
+			n = 1
+		}
+	*/
+}
+
 // 检查全局队列中的死任务Running状态的，重新加载到runtime里面
 // 单机任务随机找个节点执行
 // 广播任务, 只广播到当前的所有的节点

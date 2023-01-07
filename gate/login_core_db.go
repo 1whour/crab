@@ -36,8 +36,8 @@ type LoginCore struct {
 }
 
 // 初始化
-func newLoginTable(db *gorm.DB) (*LoginTable, error) {
-	return &LoginTable{DB: db}, nil
+func newLoginTable(db *gorm.DB) *LoginTable {
+	return &LoginTable{DB: db}
 }
 
 func md5sum(s string) string {

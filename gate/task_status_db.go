@@ -13,6 +13,7 @@ var (
 type pageStatus struct {
 	Page `gorm:"-"`
 
+	Format string `gorm:"-" form:"format"`
 	// 任务名
 	TaskName string `gorm:"index:,unique;not null;type:varchar(40)" json:"task_name" binding:"required"`
 

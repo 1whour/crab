@@ -22,7 +22,7 @@ func testInitLoginTable(t *testing.T) *LoginTable {
 	})
 
 	assert.NoError(t, err)
-	login, err := newLoginTable(db)
+	login := newLoginTable(db)
 	assert.NoError(t, err)
 
 	login.resetTable()
