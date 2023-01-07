@@ -14,7 +14,7 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-var title = []string{"id", "taskName", "status", "action", "runtimeNode", "InRuntime", "createTime", "updateTime", "runtimeIP"}
+var title = []string{"runtimeID", "taskName", "status", "action", "runtimeNode", "InRuntime", "createTime", "runtimeIP"}
 
 const (
 	endGlobalTaskKey = model.GlobalTaskPrefixState + "\xff\xff\xff\xff\xff\xff\xff\xff"
@@ -27,7 +27,6 @@ type stateRsp struct {
 	State      string          `json:"state"`
 	InRuntime  bool            `json:"in_runtime"`
 	CreateTime time.Time       `json:"create_time"`
-	UpdateTime time.Time       `json:"update_time"`
 	Ip         string          `json:"ip"`
 	Task       json.RawMessage `json:"task"`
 }
@@ -75,6 +74,11 @@ func (g *Gate) status(ctx *gin.Context) {
 	if err != nil {
 		g.error2(ctx, 500, err.Error())
 		return
+	}
+
+	if len(resp.Kvs) > 0 {
+		g.Debug().Msgf("startKey, before(%s), after(%s)", startKey, string(resp.Kvs[len(resp.Kvs)-1].Key)+"\x00")
+		startKey = string(resp.Kvs[len(resp.Kvs)-1].Key) + "\x00"
 	}
 
 	resp2, err2 := defaultKVC.Get(g.ctx, model.GlobalTaskPrefixState, clientv3.WithCountOnly(), clientv3.WithPrefix())
@@ -127,7 +131,7 @@ func (g *Gate) status(ctx *gin.Context) {
 			status.Ip = ip
 			status.Task = rsp.Kvs[0].Value
 
-			g.Debug().Msgf("state rsp.createTime:%v, rsp.createtime:%v", s.CreateTime, status.CreateTime)
+			//g.Debug().Msgf("state rsp.createTime:%v, rsp.createtime:%v", s.CreateTime, status.CreateTime)
 			deepcopy.Copy(&status, &s).Do()
 
 			list = append(list, status)

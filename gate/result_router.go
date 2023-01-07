@@ -8,11 +8,11 @@ import (
 )
 
 type Page struct {
-	Limit     int       `form:"limit" json:"limit"`
-	Page      int       `form:"page" json:"page"`
-	Sort      string    `form:"sort" json:"sort"`
-	StartTime time.Time `form:"start_time" json:"start_time"`
-	EndTime   time.Time `form:"end_time" json:"end_time"`
+	Limit     int       `form:"limit" json:"limit" `
+	Page      int       `form:"page" json:"page" `
+	Sort      string    `form:"sort" json:"sort" `
+	StartTime time.Time `form:"start_time" json:"start_time" `
+	EndTime   time.Time `form:"end_time" json:"end_time" `
 }
 
 // 保存result结果
