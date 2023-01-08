@@ -171,6 +171,10 @@ func (r *Gate) createTask(c *gin.Context) {
 		return
 	}
 
+	err = r.statusTable.insert(paramToStatus(&req))
+	if err != nil {
+		r.Warn().Msgf("status table:insert db fail:%s", err)
+	}
 	r.ok(c, "createTask Execution succeeded") //返回正确业务码
 }
 
@@ -201,6 +205,19 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 	// 创建全局数据队列key名
 	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
 
+	switch action {
+
+	case model.Stop, model.Update:
+		err = r.statusTable.update(paramToStatus(&req))
+		if err != nil {
+			r.Warn().Msgf("status table:update db fail:%s", err)
+		}
+	case model.Rm:
+		err = r.statusTable.delete(paramToStatus(&req))
+		if err != nil {
+			r.Warn().Msgf("status table:update db fail:%s", err)
+		}
+	}
 	// 先get，更新时如果没有值直接返回
 	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
 	if len(rsp.Kvs) == 0 {

@@ -3,6 +3,7 @@ package gate
 import (
 	"time"
 
+	"github.com/1whour/crab/model"
 	"gorm.io/gorm"
 )
 
@@ -33,6 +34,23 @@ type pageStatus struct {
 
 	// Runtime ID, runtime唯一无二的标识
 	RuntimeID string `gorm:"column:runtime_id;type:varchar(40)" json:"runtime_id"`
+}
+
+func paramToStatus(req *model.Param) (rv pageStatus) {
+	rv.TaskName = req.Executer.TaskName
+	if len(req.Trigger.Cron) > 0 {
+		rv.Trigger = "cron"
+		rv.TriggerValue = req.Trigger.Cron
+	} else {
+		rv.Trigger = "once"
+		rv.TriggerValue = req.Trigger.Once
+	}
+	if req.IsCreate() || req.IsUpdate() {
+		rv.Status = "running"
+	} else if req.IsStop() {
+		rv.Status = "stop"
+	}
+	return
 }
 
 // 状态表

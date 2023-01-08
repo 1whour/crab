@@ -26,6 +26,7 @@ const (
 // 任务的触发器
 type Trigger struct {
 	Cron string `yaml:"cron" json:"cron" binding:"required"`
+	Once string `yaml:"once" json:"once"`
 }
 
 func (p *Param) IsLambda() bool {
