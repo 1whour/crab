@@ -4,6 +4,14 @@ import (
 	"time"
 )
 
+// 给delete, stop, continue使用
+type OnlyParam struct {
+	Action   string `yaml:"action" json:"action"`
+	Executer struct {
+		TaskName string `yaml:"taskName" json:"taskName" binding:"required"` //自定义执行器，需要给到TaskName
+	} `json:"executer" yaml:"executer"`
+}
+
 type Param struct {
 	//api的版本号, 如果有不兼容的修改，直接修改这个字段就行
 	APIVersion string  `yaml:"apiVersion" binding:"required" json:"apiVersion"`
@@ -17,10 +25,11 @@ type Param struct {
 }
 
 const (
-	Create = "create"
-	Rm     = "remove"
-	Stop   = "stop"
-	Update = "update"
+	Create   = "create"
+	Rm       = "remove"
+	Stop     = "stop"
+	Update   = "update"
+	Continue = "continue"
 )
 
 // 任务的触发器

@@ -12,6 +12,13 @@ func (e *EtcdStore) LockCreateDataAndState(ctx context.Context, taskName string,
 	})
 
 }
+
+func (e *EtcdStore) LockUpdateAction(ctx context.Context, taskName string, req *model.OnlyParam, rspModRevision int64, state string, action string) error {
+	return e.LockUnlock(ctx, taskName, func() error {
+		return e.UpdateAction(ctx, req, rspModRevision, state, action)
+	})
+}
+
 func (e *EtcdStore) LockUpdateDataAndState(ctx context.Context, taskName string, req *model.Param, rspModRevision int64, state string, action string) error {
 	return e.LockUnlock(ctx, taskName, func() error {
 		return e.UpdateDataAndState(ctx, req, rspModRevision, state, action)

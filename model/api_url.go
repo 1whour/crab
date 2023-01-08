@@ -7,6 +7,7 @@ const (
 	TASK_DELETE_URL    = "/crab/task/"
 	TASK_UPDATE_URL    = "/crab/task/"
 	TASK_STOP_URL      = "/crab/task/stop"
+	TASK_CONTINUE_URL  = "/crab/task/continue"
 	TASK_UI_STATUS_URL = "/crab/ui/task/status"
 
 	// 执行任务时的保存结果

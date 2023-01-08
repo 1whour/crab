@@ -179,17 +179,64 @@ func (r *Gate) createTask(c *gin.Context) {
 }
 
 // 删除etcd里面task信息，也直接下发命令更新runtime里面信息
-func (r *Gate) deleteTask(c *gin.Context) {
-	r.updateTaskCore(c, model.Rm)
+func (r *Gate) removeTask(c *gin.Context) {
+	r.onlyUpdateAction(c, model.Rm)
+}
+
+// 更新etcd里面的action信息，置为停止，下发命令取消正在执行中的task
+func (r *Gate) stopTask(c *gin.Context) {
+	r.onlyUpdateAction(c, model.Stop)
+}
+
+// 更新etcd里面的action信息
+func (r *Gate) continueTask(c *gin.Context) {
+	r.onlyUpdateAction(c, model.Continue)
+}
+
+func (r *Gate) onlyUpdateAction(c *gin.Context, action string) {
+
+	var req model.OnlyParam
+	err := c.ShouldBind(&req)
+	if err != nil {
+		r.error(c, 500, "%s:%v", action, err)
+		return
+	}
+
+	req.Action = action
+	// 创建全局数据队列key名
+	globalTaskName := model.FullGlobalTask(req.Executer.TaskName)
+
+	switch action {
+
+	case model.Stop, model.Update:
+		err = r.statusTable.update(onlyParamToStatus(&req))
+		if err != nil {
+			r.Warn().Msgf("status table:update db fail:%s", err)
+		}
+	case model.Rm:
+		err = r.statusTable.delete(onlyParamToStatus(&req))
+		if err != nil {
+			r.Warn().Msgf("status table:update db fail:%s", err)
+		}
+	}
+	// 先get，更新时如果没有值直接返回
+	rsp, err := defaultKVC.Get(r.ctx, globalTaskName, clientv3.WithKeysOnly())
+	if len(rsp.Kvs) == 0 {
+		r.error(c, 500, "Task is empty and cannot be %s:%s", action, globalTaskName)
+		return
+	}
+
+	err = defaultStore.LockUpdateAction(r.ctx, req.Executer.TaskName, &req, rsp.Kvs[0].ModRevision, model.CanRun, action)
+	if err != nil {
+		r.error(c, 500, err.Error())
+		return
+	}
+
+	r.ok(c, fmt.Sprintf("%s Execution succeeded", action)) //返回正确业务码
 }
 
 func (r *Gate) updateTask(c *gin.Context) {
 	r.updateTaskCore(c, model.Update)
-}
-
-// 更新etcd里面的task信息，置为静止，下发命令取消正在执行中的task
-func (r *Gate) stopTask(c *gin.Context) {
-	r.updateTaskCore(c, model.Stop)
 }
 
 // 更新etcd里面的task信息，也下发命令更新runtime里面信息
@@ -207,13 +254,8 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 
 	switch action {
 
-	case model.Stop, model.Update:
+	case model.Update:
 		err = r.statusTable.update(paramToStatus(&req))
-		if err != nil {
-			r.Warn().Msgf("status table:update db fail:%s", err)
-		}
-	case model.Rm:
-		err = r.statusTable.delete(paramToStatus(&req))
 		if err != nil {
 			r.Warn().Msgf("status table:update db fail:%s", err)
 		}
@@ -228,10 +270,6 @@ func (r *Gate) updateTaskCore(c *gin.Context, action string) {
 	switch action {
 	case model.Update:
 		req.SetUpdate()
-	case model.Stop:
-		req.SetStop()
-	case model.Rm:
-		req.SetRemove()
 	}
 
 	err = defaultStore.LockUpdateDataAndState(r.ctx, req.Executer.TaskName, &req, rsp.Kvs[0].ModRevision, model.CanRun, action)
@@ -277,8 +315,11 @@ func (r *Gate) SubMain() {
 	g.GET(model.TASK_STREAM_URL, r.stream) //流式接口，主动推送任务至runtime
 	g.POST(model.TASK_CREATE_URL, r.createTask)
 	g.PUT(model.TASK_UPDATE_URL, r.updateTask)
-	g.DELETE(model.TASK_DELETE_URL, r.deleteTask)
-	g.POST(model.TASK_STOP_URL, r.stopTask)
+
+	// delete 和 stop, continue，只使用客户端传递过来的taskName，忽略别的字段数据
+	g.DELETE(model.TASK_DELETE_URL, r.removeTask)
+	g.PATCH(model.TASK_STOP_URL, r.stopTask)
+	g.PATCH(model.TASK_CONTINUE_URL, r.continueTask)
 
 	g.GET(model.UI_GATE_COUNT, r.gateCount)
 

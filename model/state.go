@@ -16,8 +16,8 @@ const (
 // 1.如果是Create和Update的任务，任务绑定的runtime是空, State是任何状态，都需要被恢复, 这是一个还需要被运行的状态
 // 2.如果是Stop和Rm的任务, 如果runtimeNode不为空。InRuntime == 0时会尝试一次
 type State struct {
-	// 任务id
-	RuntimeID string `json:"task_id"`
+	// runtime id
+	RuntimeID string `json:"runtime_id"`
 	// 任务名, 目前的版本是用TaskName去重的
 	TaskName string `json:"task_name"`
 	// 每个任务从全局队列中分配到本地队列都会绑定一个runtime

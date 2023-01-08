@@ -45,11 +45,22 @@ func paramToStatus(req *model.Param) (rv pageStatus) {
 		rv.Trigger = "once"
 		rv.TriggerValue = req.Trigger.Once
 	}
+
 	if req.IsCreate() || req.IsUpdate() {
 		rv.Status = "running"
-	} else if req.IsStop() {
-		rv.Status = "stop"
 	}
+	return
+}
+
+func onlyParamToStatus(req *model.OnlyParam) (rv pageStatus) {
+
+	switch req.Action {
+	case model.Stop:
+		rv.Status = "stop"
+	case model.Continue:
+		rv.Status = "running"
+	}
+
 	return
 }
 

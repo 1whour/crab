@@ -79,6 +79,84 @@ func (e *EtcdStore) CreateDataAndState(ctx context.Context, taskName string, req
 	return nil
 }
 
+// delete，rm，continue
+func (e *EtcdStore) UpdateAction(ctx context.Context, req *model.OnlyParam, rspModRevision int64, state string, action string) error {
+
+	taskName := req.Executer.TaskName
+
+	globalTaskName := model.FullGlobalTask(taskName)
+	// 创建全局状态队列key名
+	globalTaskStateName := model.FullGlobalTaskState(taskName)
+
+	for i := 0; i < maxRetry; i++ {
+
+		rspData, err := e.defaultClient.Get(ctx, globalTaskName)
+		if err != nil {
+			return err
+		}
+
+		if len(rspData.Kvs) == 0 {
+			e.Debug().Msgf("UpdateAction: data length = 0")
+			return nil
+		}
+
+		var param model.Param
+		if err = json.Unmarshal(rspData.Kvs[0].Value, &param); err != nil {
+			return err
+		}
+
+		param.Action = req.Action
+		// 请求重新序列化成json, 把action的变化加进去
+		globalData, err := json.Marshal(param)
+		if err != nil {
+			return err
+		}
+		// 获取全局状态队列里面的值
+		rspState, err := e.defaultKVC.Get(ctx, globalTaskStateName)
+		if err != nil {
+			return fmt.Errorf("get.globalTaskStateName err :%w", err)
+		}
+
+		//rspModRevision := rsp.Kvs[0].ModRevision
+		rspStateModRevision := rspState.Kvs[0].ModRevision
+
+		// 更新json中的State是CanRun
+		newValue, err := model.UpdateState(rspState.Kvs[0].Value, "", state, action, &param, taskName, "")
+		if err != nil {
+			return fmt.Errorf("updateTask, onlyUpdateState(CanRun) err :%v", err)
+		}
+
+		// 使用事务更新
+		txn := e.defaultKVC.Txn(ctx)
+		txn.If(clientv3.Compare(clientv3.ModRevision(globalTaskName), "=", rspModRevision),
+			clientv3.Compare(clientv3.ModRevision(globalTaskStateName), "=", rspStateModRevision),
+		).
+			Then(
+				clientv3.OpPut(globalTaskName, string(globalData)),    //更新全局队列里面的数据
+				clientv3.OpPut(globalTaskStateName, string(newValue)), //更新全局状态队列里面的状态
+			).Else()
+
+		// 提交事务
+		txnRsp, err := txn.Commit()
+		if err != nil {
+			return err
+		}
+
+		// 事务失败
+		if !txnRsp.Succeeded {
+			// 最多重试三次
+			if i == maxRetry-1 {
+				return fmt.Errorf("action(%s)task, retry(%d), Transaction execution failed:%s", action, i, taskName)
+			}
+			time.Sleep(time.Millisecond * time.Duration((i + 1)))
+			continue
+		}
+		// 执行成功直接返回
+		return nil
+	}
+	return nil
+}
+
 // 更新全局数据与状态队列, 仅仅更新数据
 func (e *EtcdStore) UpdateDataAndState(ctx context.Context, req *model.Param, rspModRevision int64, state string, action string) error {
 
