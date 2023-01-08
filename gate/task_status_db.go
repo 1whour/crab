@@ -7,15 +7,19 @@ import (
 )
 
 var (
-	statusColumm = []string{"task_name", "status", "create_time", "update_time", "runtime_id"}
+	statusColumm = []string{"task_name", "trigger", "trigger_value", "status", "create_time", "update_time", "runtime_id"}
 )
 
 type pageStatus struct {
-	Page `gorm:"-"`
+	Page `gorm:"-" json:"page"`
 
-	Format string `gorm:"-" form:"format"`
+	Format string `gorm:"-" form:"format" json:"format"`
 	// 任务名
-	TaskName string `gorm:"index:,unique;not null;type:varchar(40)" json:"task_name" binding:"required"`
+	TaskName string `gorm:"index:,unique;not null;type:varchar(40)" json:"task_name"`
+	// cron任务或者一次性任务
+	Trigger string `gorm:"type:enum('cron', 'once');default:'cron';column:trigger" json:"trigger"`
+	// cron表达式或者
+	TriggerValue string `gorm:"type:varchar(40);column:trigger_value" json:"trigger_value"`
 
 	// 任务状态
 	// 这里和etcd的action和status有所区别，把etcd的状态归一化成stop, running两种

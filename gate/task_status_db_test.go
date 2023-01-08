@@ -101,7 +101,7 @@ func Test_status_GetList(t *testing.T) {
 	insertAll := []pageStatus{}
 	now := time.Now()
 	for i := 0; i < 15; i++ {
-		val := pageStatus{TaskName: fmt.Sprintf("guo:%d", i), Status: "stop", CreateTime: now, UpdateTime: now, RuntimeID: fmt.Sprintf("runtimeID:%d", i)}
+		val := pageStatus{TaskName: fmt.Sprintf("guo:%d", i), Status: "stop", TriggerValue: fmt.Sprintf("trigger value:%d", i), CreateTime: now, UpdateTime: now, RuntimeID: fmt.Sprintf("runtimeID:%d", i)}
 		err = status.insert(val)
 		insertAll = append(insertAll, val)
 
