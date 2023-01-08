@@ -54,6 +54,7 @@ func paramToStatus(req *model.Param) (rv pageStatus) {
 
 func onlyParamToStatus(req *model.OnlyParam) (rv pageStatus) {
 
+	rv.TaskName = req.Executer.TaskName
 	switch req.Action {
 	case model.Stop:
 		rv.Status = "stop"

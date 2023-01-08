@@ -96,7 +96,7 @@ func UpdateStateAck(value []byte, successed bool) ([]byte, error) {
 	}
 	if successed {
 		switch s.Action {
-		case Create, Update:
+		case Create, Update, Continue:
 			s.InRuntime = true
 		case Stop, Rm:
 			s.InRuntime = false
