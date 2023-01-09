@@ -52,10 +52,20 @@ func paramToStatus(req *model.Param) (rv pageStatus) {
 	return
 }
 
-func onlyParamToStatus(req *model.OnlyParam) (rv pageStatus) {
+func onlyParamToStatus[T model.Param | model.OnlyParam](req T) (rv pageStatus) {
 
-	rv.TaskName = req.Executer.TaskName
-	switch req.Action {
+	var i interface{} = req
+	action := ""
+	switch req := i.(type) {
+	case model.Param:
+		action = req.Action
+		rv.TaskName = req.Executer.TaskName
+	case model.OnlyParam:
+		action = req.Action
+		rv.TaskName = req.Executer.TaskName
+	}
+
+	switch action {
 	case model.Stop:
 		rv.Status = "stop"
 	case model.Continue:

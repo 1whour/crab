@@ -209,12 +209,12 @@ func (r *Gate) onlyUpdateAction(c *gin.Context, action string) {
 	switch action {
 
 	case model.Stop, model.Update:
-		err = r.statusTable.update(onlyParamToStatus(&req))
+		err = r.statusTable.update(onlyParamToStatus(req))
 		if err != nil {
 			r.Warn().Msgf("status table:update db fail:%s", err)
 		}
 	case model.Rm:
-		err = r.statusTable.delete(onlyParamToStatus(&req))
+		err = r.statusTable.delete(onlyParamToStatus(req))
 		if err != nil {
 			r.Warn().Msgf("status table:update db fail:%s", err)
 		}

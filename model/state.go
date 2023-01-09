@@ -60,6 +60,10 @@ func (s State) IsStop() bool {
 	return s.Action == Stop
 }
 
+func (s State) IsContinue() bool {
+	return s.Action == Continue
+}
+
 func (s State) IsRemove() bool {
 	return s.Action == Rm
 }

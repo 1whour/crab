@@ -260,6 +260,7 @@ func (e *EtcdStore) UpdateLocalAndGlobal(ctx context.Context, taskName string, r
 		}
 		err = fmt.Errorf("prev action(%s) , current(%v)(updateLocalAndGlobal)Transaction execution failed", action, state)
 	}
+	e.Debug().Msgf("ltaskPath:%s, txn succeeded:%t", ltaskPath, txnRsp.Succeeded)
 	return
 }
 

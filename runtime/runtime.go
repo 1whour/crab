@@ -242,13 +242,15 @@ func (r *Runtime) runCrudCmd(conn *websocket.Conn, param *model.Param) (payload 
 	case param.IsRemove(), param.IsStop():
 		// 删除和stop对于runtime是一样，停止当前运行的，然后从sync.Map删除
 		payload, err = r.removeFromExec(param)
-	case param.IsUpdate():
+	case param.IsUpdate(), param.IsContinue():
 		// 先删除
 		if payload, err = r.removeFromExec(param); err != nil {
 			// 忽略找不到的错误
 			//return payload, err
 		}
 		payload, err = r.createCron(param)
+	default:
+		r.Debug().Msgf("Unknown action:%s", param.Action)
 	}
 	return payload, err
 }

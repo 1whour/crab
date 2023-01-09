@@ -74,6 +74,10 @@ func (p *Param) IsUpdate() bool {
 	return p.Action == Update
 }
 
+func (p *Param) IsContinue() bool {
+	return p.Action == Continue
+}
+
 type ExecuterParam struct {
 	TaskName  string  `yaml:"taskName" json:"taskName" binding:"required"` //自定义执行器，需要给到TaskName
 	GroupName string  `yaml:"groupName" json:"groupName"`                  //TODO, 还没想好

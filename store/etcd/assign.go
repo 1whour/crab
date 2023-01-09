@@ -180,7 +180,7 @@ func (e *EtcdStore) assign(ctx context.Context, oneTask model.KeyVal, failover b
 
 		e.RuntimeNode.RuntimeNode.Range(func(key, val string) bool {
 			err = e.UpdateLocalAndGlobal(ctx, taskName, runtimeNode, rspState, state.Action, info.Id)
-			return err == nil
+			return err == nil //没有出错，继续往下去
 		})
 	} else {
 		e.Warn().Msgf("Unknown kind:%s\n", state.Kind)

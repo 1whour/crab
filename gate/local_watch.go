@@ -98,6 +98,10 @@ func (r *Gate) watchLocalRunq(req *model.Whoami, conn *websocket.Conn) {
 						r.Error().Msgf("gate.watchLocalRunq, write successed ack fail %s, runtimeName:%s taskName(%s)\n", err, runtimeName, taskName)
 
 					}
+
+					if err = r.statusTable.update(onlyParamToStatus(param)); err != nil {
+
+					}
 				}
 			case ev.Type == clientv3.EventTypeDelete:
 				r.Debug().Msgf("delete global task:%s, state:%s\n", ev.Kv.Key, ev.Kv.Value)

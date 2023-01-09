@@ -34,6 +34,7 @@ func (r *Gate) stream(c *gin.Context) {
 			break
 		}
 
+		// 只会起动一次
 		if runtimeNode == "" {
 			go func() {
 				r.registerRuntimeWithKeepalive(req, keepalive)
