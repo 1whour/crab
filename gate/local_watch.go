@@ -99,7 +99,7 @@ func (r *Gate) watchLocalRunq(req *model.Whoami, conn *websocket.Conn) {
 
 					}
 
-					if err = r.statusTable.update(onlyParamToStatus(param)); err != nil {
+					if err = r.statusTable.update(onlyParamToStatus(param, state)); err != nil {
 
 					}
 				}

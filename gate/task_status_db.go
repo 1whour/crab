@@ -52,7 +52,7 @@ func paramToStatus(req *model.Param) (rv pageStatus) {
 	return
 }
 
-func onlyParamToStatus[T model.Param | model.OnlyParam](req T) (rv pageStatus) {
+func onlyParamToStatus[T model.Param | model.OnlyParam](req T, state model.State) (rv pageStatus) {
 
 	var i interface{} = req
 	action := ""
@@ -72,6 +72,10 @@ func onlyParamToStatus[T model.Param | model.OnlyParam](req T) (rv pageStatus) {
 		rv.Status = "running"
 	}
 
+	if len(state.RuntimeID) > 0 {
+
+		rv.RuntimeID = state.RuntimeID
+	}
 	return
 }
 

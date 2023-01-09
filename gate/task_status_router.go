@@ -2,6 +2,7 @@ package gate
 
 import (
 	"bytes"
+	"encoding/json"
 
 	"github.com/1whour/crab/model"
 	"github.com/gin-gonic/gin"
@@ -10,12 +11,10 @@ import (
 
 var title = []string{"taskName", "status", "runtimeNode", "createTime", "updateTime", "runtimeID"}
 
-/*
 type stateWithTaskRsp struct {
 	pageStatus
 	Task json.RawMessage `json:"task"`
 }
-*/
 
 // 响应的壳
 type taskStatusList struct {
@@ -62,25 +61,21 @@ func (g *Gate) status(ctx *gin.Context) {
 		ctx.String(200, buf.String())
 	} else if p.Format == "json" {
 
+		rsp := make([]stateWithTaskRsp, len(rv))
 		for i, v := range rv {
-			task, err := defautlClient.Get(g.ctx, model.FullGlobalTaskState(v.TaskName))
+			task, err := defautlClient.Get(g.ctx, model.FullGlobalTask(v.TaskName))
 			if err != nil {
 				g.Warn().Msgf("get state fail:%s", err)
 				continue
 			}
+			rsp[i].pageStatus = v
 			if len(task.Kvs) > 0 {
-
-				state, err := model.ValueToState(task.Kvs[0].Value)
-				if err != nil {
-					g.Warn().Msgf("get task list: value to state", err)
-					continue
-				}
-				rv[i].RuntimeID = state.RuntimeID
+				rsp[i].Task = task.Kvs[0].Value
 			}
 		}
 		ctx.JSON(200, wrapData{Data: taskStatusList{
 			Total: count,
-			Items: rv,
+			Items: rsp,
 		}})
 	}
 }
